@@ -25,6 +25,7 @@
 
 #include <QCoreApplication>
 
+#include <Utils.hpp>
 #include <WorkerThread.hpp>
 #include <MeasurementServer.hpp>
 
@@ -39,14 +40,31 @@ int main(int argc, char **argv)
 	if(fd == -1)
 		return 1;
 
-	axiBase = mmap(NULL, 0xC0000, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0x43C00000);
+	axiBase = mmap(NULL, 0xE0000, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0x43C00000);
 
 	if(!axiBase)
 		return EXIT_FAILURE;
 
+	tgen[0] = makePointer<TrafficGenerator>(axiBase, 0x40000);
+	tgen[1] = makePointer<TrafficGenerator>(axiBase, 0x50000);
+	tgen[2] = makePointer<TrafficGenerator>(axiBase, 0x60000);
+	tgen[3] = makePointer<TrafficGenerator>(axiBase, 0x70000);
+
+	stats[0] = makePointer<StatsCollector>(axiBase, 0x80000);
+	stats[1] = makePointer<StatsCollector>(axiBase, 0x90000);
+	stats[2] = makePointer<StatsCollector>(axiBase, 0xA0000);
+	stats[3] = makePointer<StatsCollector>(axiBase, 0xB0000);
+
+	measurer = makePointer<LatencyMeasurer>(axiBase, 0xC0000);
+	timer = makePointer<SimpleTimer>(axiBase, 0xD0000);
+
 	// Initialize Qt application
 
 	QCoreApplication app(argc, argv);
+
+	QThread *workerThreadHandle = QThread::create(workerThread);
+	workerThreadHandle->setPriority(QThread::TimeCriticalPriority);
+	workerThreadHandle->start();
 
 	new MeasurementServer();
 

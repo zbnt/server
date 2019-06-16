@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.7)
 project(zbnt_sw)
 
 find_package(Qt5 COMPONENTS Core Network REQUIRED)
+find_library(gsl libgsl.so)
+find_library(gslcblas libgslcblas.so)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
@@ -16,4 +18,4 @@ set(ZBNT_SW_SRC
 )
 
 add_executable(zbnt_daemon ${ZBNT_SW_SRC})
-target_link_libraries(zbnt_daemon Qt5::Core Qt5::Network)
+target_link_libraries(zbnt_daemon Qt5::Core Qt5::Network ${gsl} ${gslcblas} -lpthread)

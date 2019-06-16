@@ -18,28 +18,33 @@
 
 #pragma once
 
-#define MSG_VERSION           2
-#define MSG_TCP_PORT   	      5465
-#define MSG_MAGIC_IDENTIFIER  "\x4D\x60\x64\x5A"
+#include <cstdint>
 
-enum MessageID
+#include <QByteArray>
+
+template<typename T>
+constexpr volatile T *makePointer(volatile void *base, uint32_t offset)
 {
-	MSG_ID_START,
-	MSG_ID_STOP,
-	MSG_ID_CFG_TG0,
-	MSG_ID_CFG_TG1,
-	MSG_ID_CFG_LM0,
-	MSG_ID_HEADERS_TG0,
-	MSG_ID_HEADERS_TG1,
+	return (volatile T*) (uintptr_t(base) + offset);
+}
 
-	MSG_ID_MEASUREMENT_LM,
-	MSG_ID_MEASUREMENT_SC,
-	MSG_ID_MEASUREMENTS_END
-};
-
-enum RxStatus
+template<typename T>
+void appendAsBytes(QByteArray *array, T data)
 {
-	MSG_RX_MAGIC,
-	MSG_RX_HEADER,
-	MSG_RX_DATA
-};
+	array->append((const char*) &data, sizeof(T));
+}
+
+template<typename T>
+T readAsNumber(const QByteArray &data, quint32 offset)
+{
+	T res = 0;
+
+	for(int i = 0; i < sizeof(T); ++i)
+	{
+		res |= T(quint8(data[offset + i])) << (8 * i);
+	}
+
+	return res;
+}
+
+extern void memcpy_v(volatile void *dst, volatile const void *src, uint32_t count);

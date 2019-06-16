@@ -16,30 +16,10 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#pragma once
+#include <Utils.hpp>
 
-#define MSG_VERSION           2
-#define MSG_TCP_PORT   	      5465
-#define MSG_MAGIC_IDENTIFIER  "\x4D\x60\x64\x5A"
-
-enum MessageID
+void memcpy_v(volatile void *dst, volatile const void *src, uint32_t count)
 {
-	MSG_ID_START,
-	MSG_ID_STOP,
-	MSG_ID_CFG_TG0,
-	MSG_ID_CFG_TG1,
-	MSG_ID_CFG_LM0,
-	MSG_ID_HEADERS_TG0,
-	MSG_ID_HEADERS_TG1,
-
-	MSG_ID_MEASUREMENT_LM,
-	MSG_ID_MEASUREMENT_SC,
-	MSG_ID_MEASUREMENTS_END
-};
-
-enum RxStatus
-{
-	MSG_RX_MAGIC,
-	MSG_RX_HEADER,
-	MSG_RX_DATA
-};
+	while(count--)
+		*((uint8_t*) dst++) = *((uint8_t*) src++);
+}

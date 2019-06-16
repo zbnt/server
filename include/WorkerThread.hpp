@@ -18,14 +18,60 @@
 
 #pragma once
 
+#include <QMutex>
+#include <QThread>
+#include <QMutexLocker>
+#include <QByteArray>
+
 #include <TrafficGenerator.hpp>
 #include <LatencyMeasurer.hpp>
 #include <StatsCollector.hpp>
 #include <SimpleTimer.hpp>
+
+enum
+{
+	BITSTREAM_DUAL_TGEN,
+	BITSTREAM_QUAD_TGEN
+};
+
+enum
+{
+	METHOD_CONSTANT,
+	METHOD_RAND_UNIFORM,
+	METHOD_RAND_POISSON
+};
+
+struct TGenFifoConfig
+{
+	uint8_t delayMethod;
+	uint8_t paddingMethod;
+
+	uint16_t paddingBottom;
+	uint16_t paddingTop;
+
+	uint32_t delayBottom;
+	uint32_t delayTop;
+
+	uint64_t paddingPoissonCount;
+	uint16_t delayPoissonCount;
+};
 
 extern volatile TrafficGenerator *tgen[4];
 extern volatile LatencyMeasurer *measurer;
 extern volatile StatsCollector *stats[4];
 extern volatile SimpleTimer *timer;
 
+extern QMutex workerMutex;
+extern QByteArray msgBuffer;
+
+extern uint8_t running;
+extern uint8_t bitstream;
+extern TGenFifoConfig tgenFC[4];
+
 extern void workerThread();
+extern void resetPL();
+extern void fillFIFO();
+extern void writeFIFO(volatile TrafficGenerator *tg, TGenFifoConfig *fcfg);
+extern uint32_t readFIFO(volatile StatsCollector *sc);
+extern uint32_t readFIFO(volatile LatencyMeasurer *lm);
+extern void buildMessage(uint8_t id, volatile uint32_t *data, uint32_t numWords);
