@@ -16,40 +16,36 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <stdint.h>
-#include <fcntl.h>
-#include <sys/mman.h>
+#pragma once
 
-#include <QCoreApplication>
+#include <QTimer>
+#include <QTcpServer>
+#include <QTcpSocket>
 
-#include <WorkerThread.hpp>
-#include <MeasurementServer.hpp>
+#include <Messages.hpp>
 
-volatile void *axiBase = NULL;
-
-int main(int argc, char **argv)
+class MeasurementServer : public QObject
 {
-	// Map PL AXI memory block
+public:
+	MeasurementServer(QObject *parent = nullptr);
+	~MeasurementServer();
 
-	int fd = open("/dev/mem", O_RDWR | O_SYNC);
+	void sendMeasurements();
+	void onMessageReceived(quint8 id, const QByteArray &data);
 
-	if(fd == -1)
-		return 1;
+	void onIncomingConnection();
 
-	axiBase = mmap(NULL, 0xC0000, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0x43C00000);
+	void onReadyRead();
+	void onNetworkStateChanged(QAbstractSocket::SocketState state);
 
-	if(!axiBase)
-		return EXIT_FAILURE;
+private:
+	QTimer *m_timer = nullptr;
+	QTcpServer *m_server = nullptr;
+	QTcpSocket *m_client = nullptr;
 
-	// Initialize Qt application
-
-	QCoreApplication app(argc, argv);
-
-	new MeasurementServer();
-
-	return app.exec();
-}
-
+	RxStatus m_rxStatus = MSG_RX_MAGIC;
+	quint16 m_rxByteCount = 0;
+	quint16 m_rxMsgSize = 0;
+	quint8 m_rxMsgID = 0;
+	QByteArray m_rxBuffer;
+};

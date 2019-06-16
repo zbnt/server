@@ -12,6 +12,7 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include")
 set(ZBNT_SW_SRC
 	"src/Main.cpp"
 	"src/WorkerThread.cpp"
+	"src/MeasurementServer.cpp"
 )
 
 add_executable(zbnt_daemon ${ZBNT_SW_SRC})
