@@ -218,8 +218,6 @@ uint32_t readFIFO(volatile LatencyMeasurer *lm)
 
 void buildMessage(uint8_t id, volatile uint32_t *data, uint32_t numWords)
 {
-	msgBuffer.resize(msgBuffer.length() + numWords * sizeof(uint32_t) + 7);
-
 	msgBuffer.append(MSG_MAGIC_IDENTIFIER, 4);
 	appendAsBytes<quint8>(&msgBuffer, id);
 	appendAsBytes<quint16>(&msgBuffer, numWords * sizeof(uint32_t));
@@ -233,8 +231,6 @@ void buildMessage(uint8_t id, volatile uint32_t *data, uint32_t numWords)
 
 void buildMessage(uint8_t id, uint8_t idx, volatile uint32_t *data, uint32_t numWords)
 {
-	msgBuffer.resize(msgBuffer.length() + numWords * sizeof(uint32_t) + 8);
-
 	msgBuffer.append(MSG_MAGIC_IDENTIFIER, 4);
 	appendAsBytes<quint8>(&msgBuffer, id);
 	appendAsBytes<quint16>(&msgBuffer, numWords * sizeof(uint32_t) + 1);
