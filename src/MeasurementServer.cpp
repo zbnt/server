@@ -70,8 +70,10 @@ void MeasurementServer::onMessageReceived(quint8 id, const QByteArray &data)
 			stats[1]->config = readAsNumber<uint8_t>(data, 9);
 			stats[2]->config = readAsNumber<uint8_t>(data, 10);
 			stats[3]->config = readAsNumber<uint8_t>(data, 11);
-			timer->config = 1;
 
+			fillFIFO();
+
+			timer->config = 1;
 			running = 1;
 
 			for(int i = 0; i < 4; ++i)
