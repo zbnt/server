@@ -22,6 +22,7 @@
 
 #include <Utils.hpp>
 #include <WorkerThread.hpp>
+#include <BitstreamConfig.hpp>
 
 MeasurementServer::MeasurementServer(QObject *parent) : QObject(parent)
 {
@@ -42,10 +43,16 @@ MeasurementServer::~MeasurementServer()
 
 void MeasurementServer::sendMeasurements()
 {
-	QMutexLocker lock(&workerMutex);
+	if(m_client)
+	{
+		QMutexLocker lock(&workerMutex);
 
-	m_client->write(msgBuffer);
-	msgBuffer.clear();
+		if(msgBuffer.length())
+		{
+			m_client->write(msgBuffer);
+			msgBuffer.clear();
+		}
+	}
 }
 
 void MeasurementServer::onMessageReceived(quint8 id, const QByteArray &data)
@@ -206,90 +213,7 @@ void MeasurementServer::onIncomingConnection()
 
 void MeasurementServer::onReadyRead()
 {
-	QByteArray readData = m_client->readAll();
-
-	for(uint8_t c : readData)
-	{
-		switch(m_rxStatus)
-		{
-			case MSG_RX_MAGIC:
-			{
-				if(c == MSG_MAGIC_IDENTIFIER[m_rxByteCount])
-				{
-					m_rxByteCount++;
-
-					if(m_rxByteCount == 4)
-					{
-						m_rxStatus = MSG_RX_HEADER;
-						m_rxByteCount = 0;
-					}
-				}
-				else
-				{
-					m_rxByteCount = 0;
-				}
-
-				break;
-			}
-
-			case MSG_RX_HEADER:
-			{
-				switch(m_rxByteCount)
-				{
-					case 0:
-					{
-						m_rxMsgID = c;
-						m_rxByteCount++;
-						break;
-					}
-
-					case 1:
-					{
-						m_rxMsgSize = c;
-						m_rxByteCount++;
-						break;
-					}
-
-					case 2:
-					{
-						m_rxMsgSize |= c << 8;
-						m_rxByteCount = 0;
-
-						if(!m_rxMsgSize)
-						{
-							m_rxStatus = MSG_RX_MAGIC;
-							onMessageReceived(m_rxMsgID, m_rxBuffer);
-						}
-						else
-						{
-							m_rxStatus = MSG_RX_DATA;
-						}
-
-						break;
-					}
-				}
-
-				break;
-			}
-
-			case MSG_RX_DATA:
-			{
-				m_rxBuffer.append(c);
-
-				m_rxByteCount++;
-
-				if(m_rxByteCount == m_rxMsgSize)
-				{
-					m_rxStatus = MSG_RX_MAGIC;
-					m_rxByteCount = 0;
-					onMessageReceived(m_rxMsgID, m_rxBuffer);
-					m_rxBuffer.clear();
-				}
-
-				break;
-			}
-		}
-	}
+	handleIncomingData(m_client->readAll());
 }
 
 void MeasurementServer::onNetworkStateChanged(QAbstractSocket::SocketState state)

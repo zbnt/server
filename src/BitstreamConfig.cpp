@@ -16,34 +16,41 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#pragma once
+#include <BitstreamConfig.hpp>
 
-#define MSG_VERSION           20190617
-#define MSG_TCP_PORT   	      5465
-#define MSG_UDP_PORT          5466
-#define MSG_MAGIC_IDENTIFIER  "\x4D\x60\x64\x5A"
+#include <QFile>
 
-enum MessageID
+uint8_t bitstream = BITSTREAM_NONE;
+
+bool programPL(BitstreamID bid)
 {
-	MSG_ID_START = 1,
-	MSG_ID_STOP,
+	QFile plDevice("/dev/xdevcfg");
+	QFile srcBitstream;
 
-	MSG_ID_TG_CFG,
-	MSG_ID_TG_HEADERS,
-	MSG_ID_LM_CFG,
+	switch(bid)
+	{
+		case BITSTREAM_DUAL_TGEN:
+		{
+			srcBitstream.setFileName(":/bd_dual_tgen.bin");
+			break;
+		}
 
-	MSG_ID_HELLO,
-	MSG_ID_MEASUREMENT_LM,
-	MSG_ID_MEASUREMENT_SC,
-	MSG_ID_DONE,
+		case BITSTREAM_QUAD_TGEN:
+		{
+			srcBitstream.setFileName(":/bd_quad_tgen.bin");
+			break;
+		}
 
-	MSG_ID_DISCOVERY,
-	MSG_ID_DISCOVERY_RESP
-};
+		default: return false;
+	}
 
-enum RxStatus
-{
-	MSG_RX_MAGIC,
-	MSG_RX_HEADER,
-	MSG_RX_DATA
-};
+	if(!plDevice.open(QIODevice::WriteOnly)) return false;
+	if(!srcBitstream.open(QIODevice::ReadOnly)) return false;
+
+	plDevice.write(srcBitstream.readAll());
+	plDevice.close();
+	srcBitstream.close();
+
+	bitstream = bid;
+	return true;
+}

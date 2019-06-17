@@ -15,8 +15,17 @@ set(ZBNT_SW_SRC
 	"src/Main.cpp"
 	"src/Utils.cpp"
 	"src/WorkerThread.cpp"
+	"src/BitstreamConfig.cpp"
+	"src/MessageReceiver.cpp"
+	"src/DiscoveryServer.cpp"
 	"src/MeasurementServer.cpp"
 )
 
-add_executable(zbnt_daemon ${ZBNT_SW_SRC})
+set(ZBNT_SW_RES
+	"hw/hw.qrc"
+)
+
+qt5_add_resources(ZBNT_SW_SRC_RES ${ZBNT_SW_RES})
+
+add_executable(zbnt_daemon ${ZBNT_SW_SRC} ${ZBNT_SW_SRC_RES})
 target_link_libraries(zbnt_daemon Qt5::Core Qt5::Network ${gsl} ${gslcblas} -lpthread)

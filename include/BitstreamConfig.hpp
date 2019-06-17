@@ -18,32 +18,15 @@
 
 #pragma once
 
-#define MSG_VERSION           20190617
-#define MSG_TCP_PORT   	      5465
-#define MSG_UDP_PORT          5466
-#define MSG_MAGIC_IDENTIFIER  "\x4D\x60\x64\x5A"
+#include <cstdint>
 
-enum MessageID
+enum BitstreamID
 {
-	MSG_ID_START = 1,
-	MSG_ID_STOP,
-
-	MSG_ID_TG_CFG,
-	MSG_ID_TG_HEADERS,
-	MSG_ID_LM_CFG,
-
-	MSG_ID_HELLO,
-	MSG_ID_MEASUREMENT_LM,
-	MSG_ID_MEASUREMENT_SC,
-	MSG_ID_DONE,
-
-	MSG_ID_DISCOVERY,
-	MSG_ID_DISCOVERY_RESP
+	BITSTREAM_NONE,
+	BITSTREAM_DUAL_TGEN,
+	BITSTREAM_QUAD_TGEN
 };
 
-enum RxStatus
-{
-	MSG_RX_MAGIC,
-	MSG_RX_HEADER,
-	MSG_RX_DATA
-};
+extern uint8_t bitstream;
+
+extern bool programPL(BitstreamID bid);

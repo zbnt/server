@@ -18,32 +18,24 @@
 
 #pragma once
 
-#define MSG_VERSION           20190617
-#define MSG_TCP_PORT   	      5465
-#define MSG_UDP_PORT          5466
-#define MSG_MAGIC_IDENTIFIER  "\x4D\x60\x64\x5A"
+#include <QByteArray>
 
-enum MessageID
+#include <Messages.hpp>
+
+class MessageReceiver
 {
-	MSG_ID_START = 1,
-	MSG_ID_STOP,
+public:
+	MessageReceiver();
+	~MessageReceiver();
 
-	MSG_ID_TG_CFG,
-	MSG_ID_TG_HEADERS,
-	MSG_ID_LM_CFG,
+	virtual void onMessageReceived(quint8 id, const QByteArray &data) = 0;
 
-	MSG_ID_HELLO,
-	MSG_ID_MEASUREMENT_LM,
-	MSG_ID_MEASUREMENT_SC,
-	MSG_ID_DONE,
+protected:
+	void handleIncomingData(const QByteArray &readData);
 
-	MSG_ID_DISCOVERY,
-	MSG_ID_DISCOVERY_RESP
-};
-
-enum RxStatus
-{
-	MSG_RX_MAGIC,
-	MSG_RX_HEADER,
-	MSG_RX_DATA
+	RxStatus m_rxStatus = MSG_RX_MAGIC;
+	quint16 m_rxByteCount = 0;
+	quint16 m_rxMsgSize = 0;
+	quint8 m_rxMsgID = 0;
+	QByteArray m_rxBuffer;
 };

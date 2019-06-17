@@ -23,8 +23,9 @@
 #include <QTcpSocket>
 
 #include <Messages.hpp>
+#include <MessageReceiver.hpp>
 
-class MeasurementServer : public QObject
+class MeasurementServer : public QObject, public MessageReceiver
 {
 public:
 	MeasurementServer(QObject *parent = nullptr);
@@ -42,10 +43,4 @@ private:
 	QTimer *m_timer = nullptr;
 	QTcpServer *m_server = nullptr;
 	QTcpSocket *m_client = nullptr;
-
-	RxStatus m_rxStatus = MSG_RX_MAGIC;
-	quint16 m_rxByteCount = 0;
-	quint16 m_rxMsgSize = 0;
-	quint8 m_rxMsgID = 0;
-	QByteArray m_rxBuffer;
 };

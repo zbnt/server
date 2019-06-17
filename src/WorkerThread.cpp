@@ -23,6 +23,7 @@
 
 #include <Utils.hpp>
 #include <Messages.hpp>
+#include <BitstreamConfig.hpp>
 
 volatile TrafficGenerator *tgen[4] = {nullptr, nullptr, nullptr, nullptr};
 volatile LatencyMeasurer *measurer = nullptr;
@@ -30,7 +31,6 @@ volatile StatsCollector *stats[4] = {nullptr, nullptr, nullptr, nullptr};
 volatile SimpleTimer *timer = nullptr;
 
 uint8_t running = 0;
-uint8_t bitstream = BITSTREAM_DUAL_TGEN;
 TGenFifoConfig tgenFC[4];
 
 QMutex workerMutex;

@@ -18,32 +18,23 @@
 
 #pragma once
 
-#define MSG_VERSION           20190617
-#define MSG_TCP_PORT   	      5465
-#define MSG_UDP_PORT          5466
-#define MSG_MAGIC_IDENTIFIER  "\x4D\x60\x64\x5A"
+#include <QTimer>
+#include <QUdpSocket>
 
-enum MessageID
+#include <Messages.hpp>
+#include <MessageReceiver.hpp>
+
+class DiscoveryServer : public QObject, public MessageReceiver
 {
-	MSG_ID_START = 1,
-	MSG_ID_STOP,
+public:
+	DiscoveryServer(QObject *parent = nullptr);
+	~DiscoveryServer();
 
-	MSG_ID_TG_CFG,
-	MSG_ID_TG_HEADERS,
-	MSG_ID_LM_CFG,
+	void onMessageReceived(quint8 id, const QByteArray &data);
+	void onReadyRead();
 
-	MSG_ID_HELLO,
-	MSG_ID_MEASUREMENT_LM,
-	MSG_ID_MEASUREMENT_SC,
-	MSG_ID_DONE,
-
-	MSG_ID_DISCOVERY,
-	MSG_ID_DISCOVERY_RESP
+private:
+	bool m_received = false;
+	QUdpSocket *m_server = nullptr;
 };
 
-enum RxStatus
-{
-	MSG_RX_MAGIC,
-	MSG_RX_HEADER,
-	MSG_RX_DATA
-};

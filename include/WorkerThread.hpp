@@ -30,12 +30,6 @@
 
 enum
 {
-	BITSTREAM_DUAL_TGEN,
-	BITSTREAM_QUAD_TGEN
-};
-
-enum
-{
 	METHOD_CONSTANT,
 	METHOD_RAND_UNIFORM,
 	METHOD_RAND_POISSON
@@ -65,7 +59,6 @@ extern QMutex workerMutex;
 extern QByteArray msgBuffer;
 
 extern uint8_t running;
-extern uint8_t bitstream;
 extern TGenFifoConfig tgenFC[4];
 
 extern void workerThread();

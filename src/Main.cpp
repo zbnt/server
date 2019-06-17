@@ -27,6 +27,8 @@
 
 #include <Utils.hpp>
 #include <WorkerThread.hpp>
+#include <BitstreamConfig.hpp>
+#include <DiscoveryServer.hpp>
 #include <MeasurementServer.hpp>
 
 volatile void *axiBase = NULL;
@@ -58,14 +60,22 @@ int main(int argc, char **argv)
 	measurer = makePointer<LatencyMeasurer>(axiBase, 0xC0000);
 	timer = makePointer<SimpleTimer>(axiBase, 0xD0000);
 
+	// Program PL
+
+	if(!programPL(BITSTREAM_DUAL_TGEN))
+	{
+		return EXIT_FAILURE;
+	}
+
 	// Initialize Qt application
 
 	QCoreApplication app(argc, argv);
 
 	QThread *workerThreadHandle = QThread::create(workerThread);
-	workerThreadHandle->setPriority(QThread::TimeCriticalPriority);
 	workerThreadHandle->start();
+	workerThreadHandle->setPriority(QThread::TimeCriticalPriority);
 
+	new DiscoveryServer();
 	new MeasurementServer();
 
 	return app.exec();

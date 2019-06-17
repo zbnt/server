@@ -1,0 +1,6 @@
+<RCC>
+	<qresource prefix="/">
+		<file>bd_dual_tgen.bin</file>
+		<file>bd_quad_tgen.bin</file>
+	</qresource>
+</RCC>
