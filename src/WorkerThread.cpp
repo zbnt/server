@@ -39,7 +39,7 @@ gsl_rng *rng = nullptr;
 
 void workerThread()
 {
-	msgBuffer.reserve(310);
+	msgBuffer.reserve(2048);
 
 	rng = gsl_rng_alloc(gsl_rng_mt19937);
 
@@ -77,7 +77,7 @@ void workerThread()
 			if(!countRead && !timer->status)
 			{
 				running = false;
-				buildMessage(MSG_ID_MEASUREMENTS_END, nullptr, 0);
+				buildMessage(MSG_ID_DONE, nullptr, 0);
 			}
 		}
 	}
@@ -180,7 +180,7 @@ void writeFIFO(volatile TrafficGenerator *tg, TGenFifoConfig *fcfg)
 			{
 				uint32_t mu = fcfg->paddingBottom * fcfg->paddingPoissonCount;
 
-				if(mu <= std::numeric_limits<uint32_t>::max() - fcfg->paddingBottom)
+				if(mu <= 1500u - fcfg->paddingBottom)
 				{
 					fcfg->paddingPoissonCount++;
 				}

@@ -20,6 +20,11 @@
 
 void memcpy_v(volatile void *dst, volatile const void *src, uint32_t count)
 {
+	volatile uint8_t *dst8 = (volatile uint8_t*) dst;
+	volatile uint8_t *src8 = (volatile uint8_t*) src;
+
 	while(count--)
-		*((uint8_t*) dst++) = *((uint8_t*) src++);
+	{
+		*dst8++ = *src8++;
+	}
 }

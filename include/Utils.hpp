@@ -39,7 +39,7 @@ T readAsNumber(const QByteArray &data, quint32 offset)
 {
 	T res = 0;
 
-	for(int i = 0; i < sizeof(T); ++i)
+	for(uint32_t i = 0; i < sizeof(T); ++i)
 	{
 		res |= T(quint8(data[offset + i])) << (8 * i);
 	}
