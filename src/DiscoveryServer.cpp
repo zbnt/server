@@ -37,9 +37,10 @@ DiscoveryServer::~DiscoveryServer()
 
 void DiscoveryServer::onMessageReceived(quint8 id, const QByteArray &data)
 {
-	if(id == MSG_ID_DISCOVERY)
+	if(id == MSG_ID_DISCOVERY && data.length() == 8)
 	{
 		m_received = true;
+		m_recvdTime = data;
 	}
 }
 
@@ -83,11 +84,12 @@ void DiscoveryServer::onReadyRead()
 				}
 			}
 
-			appendAsBytes<quint16>(&discoveryResponse, host.length() + ip4.length() + ip6.length() + 4 + 3);
+			appendAsBytes<quint16>(&discoveryResponse, host.length() + ip4.length() + ip6.length() + 4 + 3 + 8);
 			appendAsBytes<quint32>(&discoveryResponse, MSG_VERSION);
 			appendAsBytes<quint8>(&discoveryResponse, host.length());
 			appendAsBytes<quint8>(&discoveryResponse, ip4.length() / 4);
 			appendAsBytes<quint8>(&discoveryResponse, ip6.length() / 16);
+			discoveryResponse.append(m_recvdTime);
 			discoveryResponse.append(host);
 			discoveryResponse.append(ip4);
 			discoveryResponse.append(ip6);

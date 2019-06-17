@@ -35,6 +35,7 @@ public:
 
 private:
 	bool m_received = false;
+	QByteArray m_recvdTime;
 	QUdpSocket *m_server = nullptr;
 };
 
