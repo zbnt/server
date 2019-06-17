@@ -18,6 +18,7 @@
 
 #include <DiscoveryServer.hpp>
 
+#include <QHostInfo>
 #include <QNetworkDatagram>
 #include <QNetworkInterface>
 
@@ -53,10 +54,14 @@ void DiscoveryServer::onReadyRead()
 
 		if(m_received)
 		{
-			QByteArray discoveryResponse, ip4, ip6;
+			QByteArray discoveryResponse, host, ip4, ip6;
 
 			discoveryResponse.append(MSG_MAGIC_IDENTIFIER, 4);
 			appendAsBytes<quint8>(&discoveryResponse, MSG_ID_DISCOVERY_RESP);
+
+			host = QHostInfo::localHostName().toUtf8();
+
+			if(host.length() > 255) host.resize(255);
 
 			for(const QNetworkInterface &iface : QNetworkInterface::allInterfaces())
 			{
@@ -66,19 +71,24 @@ void DiscoveryServer::onReadyRead()
 				{
 					if(address.ip().protocol() == QAbstractSocket::IPv4Protocol)
 					{
-						appendAsBytes<quint32>(&ip4, address.ip().toIPv4Address());
+						if(ip4.length() < 16)
+						{
+							appendAsBytes<quint32>(&ip4, address.ip().toIPv4Address());
+						}
 					}
-					else
+					else if(ip6.length() < 64)
 					{
 						ip6.append((const char*) address.ip().toIPv6Address().c, 16);
 					}
 				}
 			}
 
-			appendAsBytes<quint16>(&discoveryResponse, ip4.length() + ip6.length() + 4 + 2);
+			appendAsBytes<quint16>(&discoveryResponse, host.length() + ip4.length() + ip6.length() + 4 + 3);
 			appendAsBytes<quint32>(&discoveryResponse, MSG_VERSION);
+			appendAsBytes<quint8>(&discoveryResponse, host.length());
 			appendAsBytes<quint8>(&discoveryResponse, ip4.length() / 4);
 			appendAsBytes<quint8>(&discoveryResponse, ip6.length() / 16);
+			discoveryResponse.append(host);
 			discoveryResponse.append(ip4);
 			discoveryResponse.append(ip6);
 
