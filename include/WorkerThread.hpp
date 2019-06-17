@@ -65,6 +65,7 @@ extern void workerThread();
 extern void resetPL();
 extern void fillFIFO();
 extern void writeFIFO(volatile TrafficGenerator *tg, TGenFifoConfig *fcfg);
-extern uint32_t readFIFO(volatile StatsCollector *sc);
+extern uint32_t readFIFO(volatile StatsCollector *sc, uint8_t idx);
 extern uint32_t readFIFO(volatile LatencyMeasurer *lm);
 extern void buildMessage(uint8_t id, volatile uint32_t *data, uint32_t numWords);
+extern void buildMessage(uint8_t id, uint8_t idx, volatile uint32_t *data, uint32_t numWords);

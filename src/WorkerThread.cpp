@@ -64,10 +64,10 @@ void workerThread()
 		if(running)
 		{
 			uint32_t countRead = 0;
-			countRead += readFIFO(stats[0]);
-			countRead += readFIFO(stats[1]);
-			countRead += readFIFO(stats[2]);
-			countRead += readFIFO(stats[3]);
+			countRead += readFIFO(stats[0], 0);
+			countRead += readFIFO(stats[1], 1);
+			countRead += readFIFO(stats[2], 2);
+			countRead += readFIFO(stats[3], 3);
 
 			if(bitstream == BITSTREAM_DUAL_TGEN)
 			{
@@ -192,12 +192,12 @@ void writeFIFO(volatile TrafficGenerator *tg, TGenFifoConfig *fcfg)
 	}
 }
 
-uint32_t readFIFO(volatile StatsCollector *sc)
+uint32_t readFIFO(volatile StatsCollector *sc, uint8_t idx)
 {
 	if(sc->fifo_occupancy)
 	{
 		sc->fifo_pop = 1;
-		buildMessage(MSG_ID_MEASUREMENT_SC, (volatile uint32_t*) &(sc->time), 14);
+		buildMessage(MSG_ID_MEASUREMENT_SC, idx, (volatile uint32_t*) &(sc->time), 14);
 		return 1;
 	}
 
@@ -223,6 +223,22 @@ void buildMessage(uint8_t id, volatile uint32_t *data, uint32_t numWords)
 	msgBuffer.append(MSG_MAGIC_IDENTIFIER, 4);
 	appendAsBytes<quint8>(&msgBuffer, id);
 	appendAsBytes<quint16>(&msgBuffer, numWords * sizeof(uint32_t));
+
+	while(numWords--)
+	{
+		uint32_t word = *data++;
+		appendAsBytes<uint32_t>(&msgBuffer, word);
+	}
+}
+
+void buildMessage(uint8_t id, uint8_t idx, volatile uint32_t *data, uint32_t numWords)
+{
+	msgBuffer.resize(msgBuffer.length() + numWords * sizeof(uint32_t) + 8);
+
+	msgBuffer.append(MSG_MAGIC_IDENTIFIER, 4);
+	appendAsBytes<quint8>(&msgBuffer, id);
+	appendAsBytes<quint16>(&msgBuffer, numWords * sizeof(uint32_t) + 1);
+	appendAsBytes<quint8>(&msgBuffer, idx);
 
 	while(numWords--)
 	{
