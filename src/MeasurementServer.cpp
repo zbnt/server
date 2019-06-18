@@ -92,6 +92,23 @@ void MeasurementServer::onMessageReceived(quint8 id, const QByteArray &data)
 			break;
 		}
 
+		case MSG_ID_SET_BITSTREAM:
+		{
+			if(data.size() < 1) return;
+
+			BitstreamID bid = (BitstreamID) readAsNumber<uint8_t>(data, 0);
+
+			running = 0;
+
+			if(bid != bitstream)
+			{
+				programPL(bid);
+				resetPL();
+			}
+
+			break;
+		}
+
 		case MSG_ID_TG_CFG:
 		{
 			if(data.size() < 28) return;
