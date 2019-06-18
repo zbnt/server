@@ -169,7 +169,7 @@ void MeasurementServer::onMessageReceived(quint8 id, const QByteArray &data)
 			if((i >= 2 && bitstream != BITSTREAM_QUAD_TGEN) || i >= 4) return;
 
 			tgen[i]->hsize = data.length() - 1;
-			memcpy_v(tgen[i] + TGEN_MEM_OFFSET, data.constData() + 1, data.length() - 1);
+			memcpy_v((volatile uint8_t*) tgen[i] + TGEN_MEM_OFFSET, data.constData() + 1, data.length() - 1);
 
 			break;
 		}
