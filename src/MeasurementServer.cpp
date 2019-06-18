@@ -73,14 +73,14 @@ void MeasurementServer::onMessageReceived(quint8 id, const QByteArray &data)
 
 			fillFIFO();
 
-			timer->config = 1;
-			running = 1;
-
 			for(int i = 0; i < 4; ++i)
 			{
 				tgenFC[i].paddingPoissonCount = 0;
 				tgenFC[i].delayPoissonCount = 0;
 			}
+
+			timer->config = 1;
+			running = 1;
 
 			break;
 		}
@@ -196,12 +196,6 @@ void MeasurementServer::onIncomingConnection()
 	{
 		m_client = connection;
 		m_client->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
-
-		QByteArray helloMsg;
-		helloMsg.append(MSG_MAGIC_IDENTIFIER, 4);
-		appendAsBytes<quint8>(&helloMsg, MSG_ID_HELLO);
-		appendAsBytes<quint32>(&helloMsg, MSG_VERSION);
-		m_client->write(helloMsg);
 
 		connect(m_client, &QTcpSocket::readyRead, this, &MeasurementServer::onReadyRead);
 		connect(m_client, &QTcpSocket::stateChanged, this, &MeasurementServer::onNetworkStateChanged);
