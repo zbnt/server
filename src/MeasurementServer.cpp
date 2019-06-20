@@ -71,13 +71,13 @@ void MeasurementServer::onMessageReceived(quint8 id, const QByteArray &data)
 			stats[2]->config = readAsNumber<uint8_t>(data, 10);
 			stats[3]->config = readAsNumber<uint8_t>(data, 11);
 
-			fillFIFO();
-
 			for(int i = 0; i < 4; ++i)
 			{
 				tgenFC[i].paddingPoissonCount = 0;
 				tgenFC[i].delayPoissonCount = 0;
 			}
+
+			fillFIFO();
 
 			timer->config = 1;
 			running = 1;
@@ -103,6 +103,7 @@ void MeasurementServer::onMessageReceived(quint8 id, const QByteArray &data)
 			if(bid != bitstream)
 			{
 				programPL(bid);
+				QThread::sleep(5);
 				resetPL();
 			}
 
