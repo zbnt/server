@@ -29,6 +29,6 @@ typedef struct
 	uint32_t hsize;
 	uint32_t fdelay;
 	uint32_t psize;
-	uint16_t fdelay_occupancy;
 	uint16_t psize_occupancy;
+	uint16_t fdelay_occupancy;
 } TrafficGenerator;
