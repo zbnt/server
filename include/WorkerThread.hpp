@@ -50,6 +50,7 @@ struct TGenFifoConfig
 	uint16_t delayPoissonCount;
 };
 
+extern volatile uint32_t *temac[4];
 extern volatile TrafficGenerator *tgen[4];
 extern volatile LatencyMeasurer *measurer;
 extern volatile StatsCollector *stats[4];

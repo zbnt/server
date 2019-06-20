@@ -25,6 +25,7 @@
 #include <Messages.hpp>
 #include <BitstreamConfig.hpp>
 
+volatile uint32_t *temac[4] = {nullptr, nullptr, nullptr, nullptr};
 volatile TrafficGenerator *tgen[4] = {nullptr, nullptr, nullptr, nullptr};
 volatile LatencyMeasurer *measurer = nullptr;
 volatile StatsCollector *stats[4] = {nullptr, nullptr, nullptr, nullptr};
@@ -86,12 +87,24 @@ void workerThread()
 void resetPL()
 {
 	timer->config = 2;
+
 	stats[0]->config = 2;
 	stats[1]->config = 2;
 	stats[2]->config = 2;
 	stats[3]->config = 2;
+
 	tgen[0]->config = 2;
 	tgen[1]->config = 2;
+
+	temac[0][0x101] = 0x9000FFFF;
+	temac[1][0x101] = 0x9000FFFF;
+	temac[2][0x101] = 0x9000FFFF;
+	temac[3][0x101] = 0x9000FFFF;
+
+	temac[0][0x102] = 0x90000000;
+	temac[1][0x102] = 0x90000000;
+	temac[2][0x102] = 0x90000000;
+	temac[3][0x102] = 0x90000000;
 
 	if(bitstream == BITSTREAM_QUAD_TGEN)
 	{

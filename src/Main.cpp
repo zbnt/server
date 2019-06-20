@@ -47,6 +47,11 @@ int main(int argc, char **argv)
 	if(!axiBase)
 		return EXIT_FAILURE;
 
+	temac[0] = makePointer<uint32_t>(axiBase, 0x00000);
+	temac[1] = makePointer<uint32_t>(axiBase, 0x10000);
+	temac[2] = makePointer<uint32_t>(axiBase, 0x20000);
+	temac[3] = makePointer<uint32_t>(axiBase, 0x30000);
+
 	tgen[0] = makePointer<TrafficGenerator>(axiBase, 0x40000);
 	tgen[1] = makePointer<TrafficGenerator>(axiBase, 0x50000);
 	tgen[2] = makePointer<TrafficGenerator>(axiBase, 0x60000);
