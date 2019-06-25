@@ -27,9 +27,21 @@
 DiscoveryServer::DiscoveryServer(QObject *parent) : QObject(parent)
 {
 	m_server = new QUdpSocket(this);
-	m_server->bind(QHostAddress::Broadcast, MSG_UDP_PORT);
-
 	connect(m_server, &QUdpSocket::readyRead, this, &DiscoveryServer::onReadyRead);
+
+	for(const QNetworkInterface &iface : QNetworkInterface::allInterfaces())
+	{
+		if(iface.type() == QNetworkInterface::Loopback) continue;
+
+		for(const QNetworkAddressEntry &address : iface.addressEntries())
+		{
+			if(address.ip().protocol() == QAbstractSocket::IPv4Protocol)
+			{
+				m_server->bind(address.broadcast(), MSG_UDP_PORT);
+				return;
+			}
+		}
+	}
 }
 
 DiscoveryServer::~DiscoveryServer()
