@@ -29,3 +29,15 @@ qt5_add_resources(ZBNT_SW_SRC_RES ${ZBNT_SW_RES})
 
 add_executable(zbnt_daemon ${ZBNT_SW_SRC} ${ZBNT_SW_SRC_RES})
 target_link_libraries(zbnt_daemon Qt5::Core Qt5::Network ${gsl} ${gslcblas} -lpthread)
+
+install(
+	TARGETS zbnt_daemon
+	PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_READ WORLD_READ
+	DESTINATION bin
+)
+
+install(
+	FILES zbnt_daemon.service
+	PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+	DESTINATION lib/systemd/system
+)

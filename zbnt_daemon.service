@@ -1,0 +1,13 @@
+[Unit]
+Description=Background service for ZBNT
+Requires=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/zbnt_daemon
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
