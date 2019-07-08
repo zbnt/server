@@ -264,12 +264,12 @@ uint32_t readFIFO(volatile LatencyMeasurer *lm)
 	return 0;
 }
 
-uint32_t readFIFO(volatile FrameDetector* fd)
+uint32_t readFIFO(volatile FrameDetector *fd)
 {
 	if(fd->fifo_occupancy)
 	{
 		fd->fifo_pop = 1;
-		buildMessage(MSG_ID_MEASUREMENT_FD, (volatile uint32_t*) &(fd->time), 3);
+		buildMessage(MSG_ID_MEASUREMENT_FD, (volatile uint32_t*) &(fd->time_l), 3);
 		return 1;
 	}
 

@@ -30,6 +30,7 @@ typedef struct
 	uint32_t fifo_occupancy;
 	uint32_t fifo_pop;
 
-	uint64_t time;
+	uint32_t time_l;
+	uint32_t time_h;
 	uint32_t matched_patterns;
 } FrameDetector;
