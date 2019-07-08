@@ -213,7 +213,7 @@ void MeasurementServer::onMessageReceived(quint8 id, const QByteArray &data)
 			break;
 		}
 
-		case MSG_ID_FD_FILTERS:
+		case MSG_ID_FD_PATTERNS:
 		{
 			if(data.size() < FD_MEM_SIZE + 1) return;
 			if(bitstream != BITSTREAM_DUAL_TGEN_DETECTOR) return;

@@ -18,7 +18,7 @@
 
 #pragma once
 
-#define MSG_VERSION           20190707
+#define MSG_VERSION           20190708
 #define MSG_TCP_PORT   	      5465
 #define MSG_UDP_PORT          5466
 #define MSG_MAGIC_IDENTIFIER  "\x4D\x60\x64\x5A"
@@ -36,7 +36,7 @@ enum MessageID
 	MSG_ID_TG_HEADERS,
 	MSG_ID_LM_CFG,
 	MSG_ID_FD_CFG,
-	MSG_ID_FD_FILTERS,
+	MSG_ID_FD_PATTERNS,
 
 	MSG_ID_MEASUREMENT_LM,
 	MSG_ID_MEASUREMENT_FD,
