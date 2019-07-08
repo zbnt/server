@@ -29,15 +29,21 @@ bool programPL(BitstreamID bid)
 
 	switch(bid)
 	{
-		case BITSTREAM_DUAL_TGEN:
+		case BITSTREAM_DUAL_TGEN_LATENCY:
 		{
-			srcBitstream.setFileName(":/bd_dual_tgen.bin");
+			srcBitstream.setFileName(":/hw/dual_tgen_latency.bin");
+			break;
+		}
+
+		case BITSTREAM_DUAL_TGEN_DETECTOR:
+		{
+			srcBitstream.setFileName(":/hw/dual_tgen_detector.bin");
 			break;
 		}
 
 		case BITSTREAM_QUAD_TGEN:
 		{
-			srcBitstream.setFileName(":/bd_quad_tgen.bin");
+			srcBitstream.setFileName(":/hw/quad_tgen.bin");
 			break;
 		}
 

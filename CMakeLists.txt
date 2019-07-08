@@ -22,7 +22,7 @@ set(ZBNT_SW_SRC
 )
 
 set(ZBNT_SW_RES
-	"hw/hw.qrc"
+	"hw.qrc"
 )
 
 qt5_add_resources(ZBNT_SW_SRC_RES ${ZBNT_SW_RES})

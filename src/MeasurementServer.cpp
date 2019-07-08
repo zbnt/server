@@ -195,12 +195,40 @@ void MeasurementServer::onMessageReceived(quint8 id, const QByteArray &data)
 		case MSG_ID_LM_CFG:
 		{
 			if(data.size() < 13) return;
-			if(bitstream != BITSTREAM_DUAL_TGEN) return;
+			if(bitstream != BITSTREAM_DUAL_TGEN_LATENCY) return;
 
 			measurer->config = readAsNumber<uint8_t>(data, 0);
 			measurer->padding = readAsNumber<uint32_t>(data, 1);
 			measurer->delay = readAsNumber<uint32_t>(data, 5);
 			measurer->timeout = readAsNumber<uint32_t>(data, 9);
+			break;
+		}
+
+		case MSG_ID_FD_CFG:
+		{
+			if(data.size() < 2) return;
+			if(bitstream != BITSTREAM_DUAL_TGEN_DETECTOR) return;
+
+			detector->config = (readAsNumber<uint8_t>(data, 0) & 0b1) | ((readAsNumber<uint8_t>(data, 1) & 0b111111) << 2);
+			break;
+		}
+
+		case MSG_ID_FD_FILTERS:
+		{
+			if(data.size() < FD_MEM_SIZE + 1) return;
+			if(bitstream != BITSTREAM_DUAL_TGEN_DETECTOR) return;
+
+			uint8_t i = readAsNumber<uint8_t>(data, 0);
+
+			if(!i)
+			{
+				memcpy_v((volatile uint8_t*) detector + FD_MEM_A_OFFSET, data.constData() + 1, FD_MEM_SIZE);
+			}
+			else
+			{
+				memcpy_v((volatile uint8_t*) detector + FD_MEM_B_OFFSET, data.constData() + 1, FD_MEM_SIZE);
+			}
+
 			break;
 		}
 	}

@@ -29,6 +29,7 @@ volatile uint32_t *temac[4] = {nullptr, nullptr, nullptr, nullptr};
 volatile TrafficGenerator *tgen[4] = {nullptr, nullptr, nullptr, nullptr};
 volatile LatencyMeasurer *measurer = nullptr;
 volatile StatsCollector *stats[4] = {nullptr, nullptr, nullptr, nullptr};
+volatile FrameDetector *detector = nullptr;
 volatile SimpleTimer *timer = nullptr;
 
 uint8_t running = 0;
@@ -70,9 +71,19 @@ void workerThread()
 			countRead += readFIFO(stats[2], 2);
 			countRead += readFIFO(stats[3], 3);
 
-			if(bitstream == BITSTREAM_DUAL_TGEN)
+			switch(bitstream)
 			{
-				countRead += readFIFO(measurer);
+				case BITSTREAM_DUAL_TGEN_LATENCY:
+				{
+					countRead += readFIFO(measurer);
+					break;
+				}
+
+				case BITSTREAM_DUAL_TGEN_DETECTOR:
+				{
+					countRead += readFIFO(detector);
+					break;
+				}
 			}
 
 			if(!countRead && !timer->status)
@@ -106,14 +117,26 @@ void resetPL()
 	temac[2][0x102] = 0x90000000;
 	temac[3][0x102] = 0x90000000;
 
-	if(bitstream == BITSTREAM_QUAD_TGEN)
+	switch(bitstream)
 	{
-		tgen[2]->config = 2;
-		tgen[3]->config = 2;
-	}
-	else
-	{
-		measurer->config = 2;
+		case BITSTREAM_DUAL_TGEN_LATENCY:
+		{
+			measurer->config = 2;
+			break;
+		}
+
+		case BITSTREAM_DUAL_TGEN_DETECTOR:
+		{
+			detector->config = 2;
+			break;
+		}
+
+		case BITSTREAM_QUAD_TGEN:
+		{
+			tgen[2]->config = 2;
+			tgen[3]->config = 2;
+			break;
+		}
 	}
 
 	QThread::msleep(100);
@@ -126,14 +149,26 @@ void resetPL()
 	tgen[0]->config = 0;
 	tgen[1]->config = 0;
 
-	if(bitstream == BITSTREAM_QUAD_TGEN)
+	switch(bitstream)
 	{
-		tgen[2]->config = 0;
-		tgen[3]->config = 0;
-	}
-	else
-	{
-		measurer->config = 0;
+		case BITSTREAM_DUAL_TGEN_LATENCY:
+		{
+			measurer->config = 0;
+			break;
+		}
+
+		case BITSTREAM_DUAL_TGEN_DETECTOR:
+		{
+			detector->config = 0;
+			break;
+		}
+
+		case BITSTREAM_QUAD_TGEN:
+		{
+			tgen[2]->config = 0;
+			tgen[3]->config = 0;
+			break;
+		}
 	}
 }
 
@@ -222,7 +257,19 @@ uint32_t readFIFO(volatile LatencyMeasurer *lm)
 	if(lm->fifo_occupancy)
 	{
 		lm->fifo_pop = 1;
-		buildMessage(MSG_ID_MEASUREMENT_LM, (volatile uint32_t*) &(measurer->time), 10);
+		buildMessage(MSG_ID_MEASUREMENT_LM, (volatile uint32_t*) &(lm->time), 10);
+		return 1;
+	}
+
+	return 0;
+}
+
+uint32_t readFIFO(volatile FrameDetector* fd)
+{
+	if(fd->fifo_occupancy)
+	{
+		fd->fifo_pop = 1;
+		buildMessage(MSG_ID_MEASUREMENT_FD, (volatile uint32_t*) &(fd->time), 3);
 		return 1;
 	}
 

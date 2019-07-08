@@ -42,7 +42,7 @@ int main(int argc, char **argv)
 	if(fd == -1)
 		return 1;
 
-	axiBase = mmap(NULL, 0xE0000, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0x43C00000);
+	axiBase = mmap(NULL, 0xF0000, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0x43C00000);
 
 	if(!axiBase)
 		return EXIT_FAILURE;
@@ -64,10 +64,11 @@ int main(int argc, char **argv)
 
 	measurer = makePointer<LatencyMeasurer>(axiBase, 0xC0000);
 	timer = makePointer<SimpleTimer>(axiBase, 0xD0000);
+	detector = makePointer<FrameDetector>(axiBase, 0xE0000);
 
 	// Program PL
 
-	if(!programPL(BITSTREAM_DUAL_TGEN))
+	if(!programPL(BITSTREAM_DUAL_TGEN_LATENCY))
 	{
 		return EXIT_FAILURE;
 	}

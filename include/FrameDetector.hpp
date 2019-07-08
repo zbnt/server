@@ -18,35 +18,18 @@
 
 #pragma once
 
-#define MSG_VERSION           20190707
-#define MSG_TCP_PORT   	      5465
-#define MSG_UDP_PORT          5466
-#define MSG_MAGIC_IDENTIFIER  "\x4D\x60\x64\x5A"
+#include <cstdint>
 
-enum MessageID
+#define FD_MEM_A_OFFSET 0x2000
+#define FD_MEM_B_OFFSET 0x4000
+#define FD_MEM_SIZE     1536 * 4
+
+typedef struct
 {
-	MSG_ID_DISCOVERY = 1,
-	MSG_ID_DISCOVERY_RESP,
+	uint32_t config;
+	uint32_t fifo_occupancy;
+	uint32_t fifo_pop;
 
-	MSG_ID_START,
-	MSG_ID_STOP,
-	MSG_ID_SET_BITSTREAM,
-
-	MSG_ID_TG_CFG,
-	MSG_ID_TG_HEADERS,
-	MSG_ID_LM_CFG,
-	MSG_ID_FD_CFG,
-	MSG_ID_FD_FILTERS,
-
-	MSG_ID_MEASUREMENT_LM,
-	MSG_ID_MEASUREMENT_FD,
-	MSG_ID_MEASUREMENT_SC,
-	MSG_ID_DONE
-};
-
-enum RxStatus
-{
-	MSG_RX_MAGIC,
-	MSG_RX_HEADER,
-	MSG_RX_DATA
-};
+	uint64_t time;
+	uint32_t matched_patterns;
+} FrameDetector;
