@@ -112,7 +112,7 @@ void MeasurementServer::onMessageReceived(quint8 id, const QByteArray &data)
 
 		case MSG_ID_TG_CFG:
 		{
-			if(data.size() < 28) return;
+			if(data.size() < 33) return;
 
 			uint8_t i = readAsNumber<uint8_t>(data, 0);
 
@@ -173,6 +173,15 @@ void MeasurementServer::onMessageReceived(quint8 id, const QByteArray &data)
 						break;
 					}
 				}
+			}
+
+			uint8_t useBurst = readAsNumber<uint8_t>(data, 28);
+
+			if(useBurst)
+			{
+				tgen[i]->burst_time_on = readAsNumber<uint16_t>(data, 29);
+				tgen[i]->burst_time_off = readAsNumber<uint16_t>(data, 31);
+				tgen[i]->config |= 1 << 4;
 			}
 
 			break;
