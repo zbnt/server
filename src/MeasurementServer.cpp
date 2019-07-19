@@ -34,8 +34,12 @@ MeasurementServer::MeasurementServer(QObject *parent) : QObject(parent)
 	m_server = new QTcpServer(this);
 	m_server->listen(QHostAddress::Any, MSG_TCP_PORT);
 
+	m_streamServer = new QTcpServer(this);
+	m_streamServer->listen(QHostAddress::Any, MSG_TCP_STREAM_PORT);
+
 	connect(m_timer, &QTimer::timeout, this, &MeasurementServer::sendMeasurements);
 	connect(m_server, &QTcpServer::newConnection, this, &MeasurementServer::onIncomingConnection);
+	connect(m_streamServer, &QTcpServer::newConnection, this, &MeasurementServer::onIncomingStreamConnection);
 }
 
 MeasurementServer::~MeasurementServer()
@@ -43,14 +47,32 @@ MeasurementServer::~MeasurementServer()
 
 void MeasurementServer::sendMeasurements()
 {
-	if(m_client)
+	if(!streamMode)
 	{
-		QMutexLocker lock(&workerMutex);
-
-		if(msgBuffer.length())
+		if(m_client)
 		{
-			m_client->write(msgBuffer);
-			msgBuffer.clear();
+			QMutexLocker lock(&workerMutex);
+
+			if(msgBuffer.length())
+			{
+				m_client->write(msgBuffer);
+				msgBuffer.clear();
+			}
+		}
+	}
+	else
+	{
+		if(m_streamClient)
+		{
+			QMutexLocker lock(&workerMutex);
+			QByteArray streamData;
+
+			appendAsBytes<double>(&streamData, dataRate[0]);
+			appendAsBytes<double>(&streamData, dataRate[1]);
+			appendAsBytes<double>(&streamData, dataRate[2]);
+			appendAsBytes<double>(&streamData, dataRate[3]);
+
+			m_streamClient->write(streamData);
 		}
 	}
 }
@@ -66,10 +88,10 @@ void MeasurementServer::onMessageReceived(quint8 id, const QByteArray &data)
 			if(data.size() < 12) return;
 
 			timer->max_time = readAsNumber<uint64_t>(data, 0);
-			stats[0]->config = readAsNumber<uint8_t>(data, 8);
-			stats[1]->config = readAsNumber<uint8_t>(data, 9);
-			stats[2]->config = readAsNumber<uint8_t>(data, 10);
-			stats[3]->config = readAsNumber<uint8_t>(data, 11);
+			stats[0]->config = readAsNumber<uint8_t>(data, 8) | (1 << 3);
+			stats[1]->config = readAsNumber<uint8_t>(data, 9) | (1 << 3);
+			stats[2]->config = readAsNumber<uint8_t>(data, 10) | (1 << 3);
+			stats[3]->config = readAsNumber<uint8_t>(data, 11) | (1 << 3);
 
 			for(int i = 0; i < 4; ++i)
 			{
@@ -82,11 +104,50 @@ void MeasurementServer::onMessageReceived(quint8 id, const QByteArray &data)
 			timer->config = 1;
 			running = 1;
 
+			if(m_streamClient)
+			{
+				m_streamClient->abort();
+			}
+
+			streamMode = 0;
+			m_timer->setInterval(100);
+
+			break;
+		}
+
+		case MSG_ID_START_STREAM:
+		{
+			if(data.size() < 2) return;
+
+			timer->max_time = 0xFFFFFFFF'FFFFFFFFull;
+			timer->config = 1;
+
+			running = 1;
+			streamMode = 1;
+
+			for(int i = 0; i < 4; ++i)
+			{
+				stats[i]->config = 1;
+
+				dataRate[i] = 0;
+				lastTxBytesCount[i] = 0;
+			}
+
+			m_timer->setInterval(readAsNumber<uint16_t>(data, 0));
+
 			break;
 		}
 
 		case MSG_ID_STOP:
 		{
+			if(m_streamClient)
+			{
+				m_streamClient->abort();
+			}
+
+			streamMode = 0;
+			m_timer->setInterval(100);
+
 			running = 0;
 			resetPL();
 			break;
@@ -262,6 +323,25 @@ void MeasurementServer::onIncomingConnection()
 	}
 }
 
+void MeasurementServer::onIncomingStreamConnection()
+{
+	QTcpSocket *connection = m_streamServer->nextPendingConnection();
+
+	if(!m_streamClient && streamMode)
+	{
+		m_streamClient = connection;
+		m_streamReadBuffer.clear();
+
+		connect(m_streamClient, &QTcpSocket::readyRead, this, &MeasurementServer::onStreamReadyRead);
+		connect(m_streamClient, &QTcpSocket::stateChanged, this, &MeasurementServer::onStreamNetworkStateChanged);
+	}
+	else
+	{
+		connection->abort();
+		connection->deleteLater();
+	}
+}
+
 void MeasurementServer::onReadyRead()
 {
 	handleIncomingData(m_client->readAll());
@@ -273,5 +353,55 @@ void MeasurementServer::onNetworkStateChanged(QAbstractSocket::SocketState state
 	{
 		m_client->deleteLater();
 		m_client = nullptr;
+	}
+}
+
+void MeasurementServer::onStreamReadyRead()
+{
+	m_streamReadBuffer += m_streamClient->readAll();
+
+	// Frame format:
+	//    [ EN0 | EN1 | EN2 | EN3 | PSIZE0 | PSIZE1 | PSIZE2 | PSIZE3 | FDELAY0 | FDELAY1 | FDELAY2 | FDELAY3 ]
+	//       4     4     4     4      4        4        4        4         4         4         4         4
+	//       = 48 bytes
+
+	if(m_streamReadBuffer.length() >= 48*2)
+	{
+		m_streamReadBuffer.remove(0, m_streamReadBuffer.length() - 48 - m_streamReadBuffer.length() % 48);
+	}
+
+	if(m_streamReadBuffer.length() >= 48)
+	{
+		QMutexLocker lock(&workerMutex);
+
+		tgen[0]->config = readAsNumber<uint8_t>(m_streamReadBuffer, 0);
+		tgen[1]->config = readAsNumber<uint8_t>(m_streamReadBuffer, 4);
+
+		tgen[0]->psize = readAsNumber<uint16_t>(m_streamReadBuffer, 16);
+		tgen[1]->psize = readAsNumber<uint16_t>(m_streamReadBuffer, 20);
+
+		tgen[0]->fdelay = readAsNumber<uint32_t>(m_streamReadBuffer, 32);
+		tgen[1]->fdelay = readAsNumber<uint32_t>(m_streamReadBuffer, 36);
+
+		if(bitstream == BITSTREAM_QUAD_TGEN)
+		{
+			tgen[2]->config = readAsNumber<uint8_t>(m_streamReadBuffer, 8);
+			tgen[3]->config = readAsNumber<uint8_t>(m_streamReadBuffer, 12);
+
+			tgen[2]->psize = readAsNumber<uint16_t>(m_streamReadBuffer, 24);
+			tgen[3]->psize = readAsNumber<uint16_t>(m_streamReadBuffer, 28);
+
+			tgen[2]->fdelay = readAsNumber<uint32_t>(m_streamReadBuffer, 40);
+			tgen[3]->fdelay = readAsNumber<uint32_t>(m_streamReadBuffer, 44);
+		}
+	}
+}
+
+void MeasurementServer::onStreamNetworkStateChanged(QAbstractSocket::SocketState state)
+{
+	if(state == QAbstractSocket::UnconnectedState)
+	{
+		m_streamClient->deleteLater();
+		m_streamClient = nullptr;
 	}
 }

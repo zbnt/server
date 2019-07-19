@@ -33,11 +33,15 @@ volatile FrameDetector *detector = nullptr;
 volatile SimpleTimer *timer = nullptr;
 
 uint8_t running = 0;
+uint8_t streamMode = 0;
 TGenFifoConfig tgenFC[4];
 
 QMutex workerMutex;
 QByteArray msgBuffer;
 gsl_rng *rng = nullptr;
+
+double dataRate[4];
+uint64_t lastTxBytesCount[4], lastTxBytesTime[4];
 
 void workerThread()
 {
@@ -51,45 +55,68 @@ void workerThread()
 	{
 		QMutexLocker lock(&workerMutex);
 
-		if(timer->status)
+		if(!streamMode)
 		{
-			writeFIFO(tgen[0], &tgenFC[0]);
-			writeFIFO(tgen[1], &tgenFC[1]);
-
-			if(bitstream == BITSTREAM_QUAD_TGEN)
+			if(timer->status)
 			{
-				writeFIFO(tgen[2], &tgenFC[2]);
-				writeFIFO(tgen[3], &tgenFC[3]);
+				writeFIFO(tgen[0], &tgenFC[0]);
+				writeFIFO(tgen[1], &tgenFC[1]);
+
+				if(bitstream == BITSTREAM_QUAD_TGEN)
+				{
+					writeFIFO(tgen[2], &tgenFC[2]);
+					writeFIFO(tgen[3], &tgenFC[3]);
+				}
+			}
+
+			if(running)
+			{
+				uint32_t countRead = 0;
+				countRead += readFIFO(stats[0], 0);
+				countRead += readFIFO(stats[1], 1);
+				countRead += readFIFO(stats[2], 2);
+				countRead += readFIFO(stats[3], 3);
+
+				switch(bitstream)
+				{
+					case BITSTREAM_DUAL_TGEN_LATENCY:
+					{
+						countRead += readFIFO(measurer);
+						break;
+					}
+
+					case BITSTREAM_DUAL_TGEN_DETECTOR:
+					{
+						countRead += readFIFO(detector);
+						break;
+					}
+				}
+
+				if(!countRead && !timer->status)
+				{
+					running = false;
+					buildMessage(MSG_ID_DONE, nullptr, 0);
+				}
 			}
 		}
-
-		if(running)
+		else
 		{
-			uint32_t countRead = 0;
-			countRead += readFIFO(stats[0], 0);
-			countRead += readFIFO(stats[1], 1);
-			countRead += readFIFO(stats[2], 2);
-			countRead += readFIFO(stats[3], 3);
-
-			switch(bitstream)
+			if(timer->status)
 			{
-				case BITSTREAM_DUAL_TGEN_LATENCY:
+				for(int i = 0; i < 4; ++i)
 				{
-					countRead += readFIFO(measurer);
-					break;
-				}
+					stats[i]->config |= (1 << 2);
 
-				case BITSTREAM_DUAL_TGEN_DETECTOR:
-				{
-					countRead += readFIFO(detector);
-					break;
-				}
-			}
+					if(stats[i]->time != lastTxBytesTime[i])
+					{
+						dataRate[i] = ((stats[i]->tx_bytes - lastTxBytesCount[i]) / double(stats[i]->time - lastTxBytesTime[i])) * 1000.0;
 
-			if(!countRead && !timer->status)
-			{
-				running = false;
-				buildMessage(MSG_ID_DONE, nullptr, 0);
+						lastTxBytesCount[i] = stats[i]->tx_bytes;
+						lastTxBytesTime[i] = stats[i]->time;
+					}
+
+					stats[i]->config &= ~(1 << 2);
+				}
 			}
 		}
 	}

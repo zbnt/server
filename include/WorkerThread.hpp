@@ -62,7 +62,11 @@ extern QMutex workerMutex;
 extern QByteArray msgBuffer;
 
 extern uint8_t running;
+extern uint8_t streamMode;
 extern TGenFifoConfig tgenFC[4];
+
+extern double dataRate[4];
+extern uint64_t lastTxBytesCount[4], lastTxBytesTime[4];
 
 extern void workerThread();
 extern void resetPL();
