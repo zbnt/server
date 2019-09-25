@@ -1,26 +1,22 @@
 
 # zbnt_sw
 
-Board software for ZBNT, a configurable network tester for the [ZedBoard](http://www.zedboard.org/product/zedboard)
+Board software for ZBNT, a configurable network tester for Xilinx FPGAs/SoCs
 
 ## Related projects
 
-* **GUI:** [zbnt_sw](https://github.com/oscar-rc1/zbnt_sw)
-* **Hardware cores and block designs:** [zbnt_hw](https://github.com/oscar-rc1/zbnt_hw)
+* **Hardware cores and block designs:** [zbnt_hw](https://github.com/zbnt/zbnt_hw)
 
 ## Requirements
 
-* Bitstreams for the Programmable Logic (see [zbnt_hw](https://github.com/oscar-rc1/zbnt_hw))
-* A working GNU/Linux system running on the board, with the following libraries/tools:
-	* Qt5Core
-	* Qt5Network
-	* GNU Scientific Library (GSL)
+* Bitstreams for the Programmable Logic (see [zbnt_hw](https://github.com/zbnt/zbnt_hw))
+* A working GNU/Linux system with the following libraries/tools:
+	* Qt5
 	* CMake
 
 ## Building
 
 1. Clone this repository, make sure all dependencies are installed before proceeding.
-2. Create a directory named `hw` and copy the bitstream binaries there.
 2. Create a directory for the build, `cd` to it and run `cmake`:
 
 ~~~~
