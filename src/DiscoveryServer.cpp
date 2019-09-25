@@ -29,6 +29,8 @@ DiscoveryServer::DiscoveryServer(QObject *parent) : QObject(parent)
 	m_server = new QUdpSocket(this);
 	connect(m_server, &QUdpSocket::readyRead, this, &DiscoveryServer::onReadyRead);
 
+	QHostAddress broadcastAddr;
+
 	for(const QNetworkInterface &iface : QNetworkInterface::allInterfaces())
 	{
 		if(iface.type() == QNetworkInterface::Loopback) continue;
@@ -37,10 +39,17 @@ DiscoveryServer::DiscoveryServer(QObject *parent) : QObject(parent)
 		{
 			if(address.ip().protocol() == QAbstractSocket::IPv4Protocol)
 			{
-				m_server->bind(address.broadcast(), MSG_UDP_PORT);
-				return;
+				if(broadcastAddr.isNull() || broadcastAddr.isLinkLocal())
+				{
+					broadcastAddr = address.broadcast();
+				}
 			}
 		}
+	}
+
+	if(!broadcastAddr.isNull())
+	{
+		m_server->bind(broadcastAddr, MSG_UDP_PORT);
 	}
 }
 
@@ -67,10 +76,8 @@ void DiscoveryServer::onReadyRead()
 
 		if(m_received)
 		{
-			QByteArray discoveryResponse, host, ip4, ip6;
-
-			discoveryResponse.append(MSG_MAGIC_IDENTIFIER, 4);
-			appendAsBytes<quint8>(&discoveryResponse, MSG_ID_DISCOVERY_RESP);
+			QByteArray discoveryResponse, host;
+			QHostAddress ip4, ip6;
 
 			host = QHostInfo::localHostName().toUtf8();
 
@@ -84,27 +91,48 @@ void DiscoveryServer::onReadyRead()
 				{
 					if(address.ip().protocol() == QAbstractSocket::IPv4Protocol)
 					{
-						if(ip4.length() < 16)
+						if(ip4.isNull() || ip4.isLinkLocal())
 						{
-							appendAsBytes<quint32>(&ip4, address.ip().toIPv4Address());
+							ip4 = address.ip();
 						}
 					}
-					else if(ip6.length() < 64)
+					else
 					{
-						ip6.append((const char*) address.ip().toIPv6Address().c, 16);
+						if(ip6.isNull() || ip6.isLinkLocal())
+						{
+							ip6 = address.ip();
+						}
 					}
 				}
 			}
 
-			appendAsBytes<quint16>(&discoveryResponse, host.length() + ip4.length() + ip6.length() + 4 + 3 + 8);
+			if(ip4.isNull() && ip6.isNull()) continue;
+
+			discoveryResponse.append(MSG_MAGIC_IDENTIFIER, 4);
+			appendAsBytes<quint8>(&discoveryResponse, MSG_ID_DISCOVERY_RESP);
+			appendAsBytes<quint16>(&discoveryResponse, 4 + 8 + 4 + 16 + host.length());
 			appendAsBytes<quint32>(&discoveryResponse, MSG_VERSION);
-			appendAsBytes<quint8>(&discoveryResponse, host.length());
-			appendAsBytes<quint8>(&discoveryResponse, ip4.length() / 4);
-			appendAsBytes<quint8>(&discoveryResponse, ip6.length() / 16);
 			discoveryResponse.append(m_recvdTime);
+
+			if(!ip4.isNull())
+			{
+				appendAsBytes<quint32>(&discoveryResponse, ip4.toIPv4Address());
+			}
+			else
+			{
+				discoveryResponse.append(4, '\0');
+			}
+
+			if(!ip6.isNull())
+			{
+				discoveryResponse.append((const char*) ip6.toIPv6Address().c, 16);
+			}
+			else
+			{
+				discoveryResponse.append(16, '\0');
+			}
+
 			discoveryResponse.append(host);
-			discoveryResponse.append(ip4);
-			discoveryResponse.append(ip6);
 
 			m_server->writeDatagram(datagram.makeReply(discoveryResponse));
 		}
