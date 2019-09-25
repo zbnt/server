@@ -31,8 +31,6 @@
 #include <DiscoveryServer.hpp>
 #include <MeasurementServer.hpp>
 
-volatile void *axiBase = NULL;
-
 int main(int argc, char **argv)
 {
 	// Map PL AXI memory block
@@ -42,29 +40,25 @@ int main(int argc, char **argv)
 	if(fd == -1)
 		return 1;
 
-	axiBase = mmap(NULL, 0xF0000, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0x43C00000);
+	volatile void *axiBase = mmap(NULL, 0xB0000, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0x43C00000);
 
 	if(!axiBase)
 		return EXIT_FAILURE;
 
-	temac[0] = makePointer<uint32_t>(axiBase, 0x00000);
-	temac[1] = makePointer<uint32_t>(axiBase, 0x10000);
-	temac[2] = makePointer<uint32_t>(axiBase, 0x20000);
-	temac[3] = makePointer<uint32_t>(axiBase, 0x30000);
+	timer = makePointer<SimpleTimer>(axiBase, 0x00000);
 
-	tgen[0] = makePointer<TrafficGenerator>(axiBase, 0x40000);
-	tgen[1] = makePointer<TrafficGenerator>(axiBase, 0x50000);
-	tgen[2] = makePointer<TrafficGenerator>(axiBase, 0x60000);
-	tgen[3] = makePointer<TrafficGenerator>(axiBase, 0x70000);
+	stats[0] = makePointer<StatsCollector>(axiBase, 0x10000);
+	stats[1] = makePointer<StatsCollector>(axiBase, 0x20000);
+	stats[2] = makePointer<StatsCollector>(axiBase, 0x30000);
+	stats[3] = makePointer<StatsCollector>(axiBase, 0x40000);
 
-	stats[0] = makePointer<StatsCollector>(axiBase, 0x80000);
-	stats[1] = makePointer<StatsCollector>(axiBase, 0x90000);
-	stats[2] = makePointer<StatsCollector>(axiBase, 0xA0000);
-	stats[3] = makePointer<StatsCollector>(axiBase, 0xB0000);
+	tgen[0] = makePointer<TrafficGenerator>(axiBase, 0x50000);
+	tgen[1] = makePointer<TrafficGenerator>(axiBase, 0x60000);
+	tgen[2] = makePointer<TrafficGenerator>(axiBase, 0x70000);
+	tgen[3] = makePointer<TrafficGenerator>(axiBase, 0x80000);
 
-	measurer = makePointer<LatencyMeasurer>(axiBase, 0xC0000);
-	timer = makePointer<SimpleTimer>(axiBase, 0xD0000);
-	detector = makePointer<FrameDetector>(axiBase, 0xE0000);
+	measurer = makePointer<LatencyMeasurer>(axiBase, 0x90000);
+	detector = makePointer<FrameDetector>(axiBase, 0xA0000);
 
 	// Program PL
 
@@ -86,4 +80,3 @@ int main(int argc, char **argv)
 
 	return app.exec();
 }
-
