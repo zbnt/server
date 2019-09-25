@@ -1,5 +1,0 @@
-<RCC>
-	<qresource prefix="/">
-		<file>hw/</file>
-	</qresource>
-</RCC>

@@ -24,38 +24,34 @@ uint8_t bitstream = BITSTREAM_NONE;
 
 bool programPL(BitstreamID bid)
 {
-	QFile plDevice("/dev/xdevcfg");
-	QFile srcBitstream;
+	QFile plConfig("/sys/class/fpga_manager/fpga0/firmware");
+
+	if(!plConfig.open(QIODevice::WriteOnly)) return false;
 
 	switch(bid)
 	{
 		case BITSTREAM_DUAL_TGEN_LATENCY:
 		{
-			srcBitstream.setFileName(":/hw/dual_tgen_latency.bin");
+			plConfig.write("zbnt/dual_tgen_latency.bin");
 			break;
 		}
 
 		case BITSTREAM_DUAL_TGEN_DETECTOR:
 		{
-			srcBitstream.setFileName(":/hw/dual_tgen_detector.bin");
+			plConfig.write("zbnt/dual_tgen_detector.bin");
 			break;
 		}
 
 		case BITSTREAM_QUAD_TGEN:
 		{
-			srcBitstream.setFileName(":/hw/quad_tgen.bin");
+			plConfig.write("zbnt/quad_tgen.bin");
 			break;
 		}
 
 		default: return false;
 	}
 
-	if(!plDevice.open(QIODevice::WriteOnly)) return false;
-	if(!srcBitstream.open(QIODevice::ReadOnly)) return false;
-
-	plDevice.write(srcBitstream.readAll());
-	plDevice.close();
-	srcBitstream.close();
+	plConfig.close();
 
 	bitstream = bid;
 	return true;
