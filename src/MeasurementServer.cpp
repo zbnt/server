@@ -93,14 +93,6 @@ void MeasurementServer::onMessageReceived(quint8 id, const QByteArray &data)
 			stats[2]->config = readAsNumber<uint8_t>(data, 10) | (1 << 3);
 			stats[3]->config = readAsNumber<uint8_t>(data, 11) | (1 << 3);
 
-			for(int i = 0; i < 4; ++i)
-			{
-				tgenFC[i].paddingPoissonCount = 0;
-				tgenFC[i].delayPoissonCount = 0;
-			}
-
-			fillFIFO();
-
 			timer->config = 1;
 			running = 1;
 
@@ -173,91 +165,52 @@ void MeasurementServer::onMessageReceived(quint8 id, const QByteArray &data)
 
 		case MSG_ID_TG_CFG:
 		{
-			if(data.size() < 33) return;
+			if(data.size() < 21) return;
 
 			uint8_t i = readAsNumber<uint8_t>(data, 0);
 
 			if((i >= 2 && bitstream != BITSTREAM_QUAD_TGEN) || i >= 4) return;
 
 			tgen[i]->config = readAsNumber<uint8_t>(data, 1);
+			tgen[i]->fsize = readAsNumber<uint16_t>(data, 2);
+			tgen[i]->fdelay = readAsNumber<uint32_t>(data, 4);
+			tgen[i]->lfsr_seed_val = readAsNumber<uint64_t>(data, 13);
+			tgen[i]->lfsr_seed_req = 1;
 
-			if(tgen[i]->config)
-			{
-				tgenFC[i].paddingMethod = readAsNumber<uint8_t>(data, 2);
-
-				switch(tgenFC[i].paddingMethod)
-				{
-					case METHOD_CONSTANT:
-					{
-						tgen[i]->psize = readAsNumber<uint16_t>(data, 3);
-						break;
-					}
-
-					case METHOD_RAND_UNIFORM:
-					{
-						tgenFC[i].paddingBottom = readAsNumber<uint16_t>(data, 5);
-						tgenFC[i].paddingTop = readAsNumber<uint16_t>(data, 7) - tgenFC[i].paddingBottom + 1;
-						tgen[i]->config |= 1 << 3;
-						break;
-					}
-
-					case METHOD_RAND_POISSON:
-					{
-						tgenFC[i].paddingBottom = readAsNumber<uint16_t>(data, 9);
-						tgen[i]->config |= 1 << 3;
-						break;
-					}
-				}
-
-				tgenFC[i].delayMethod = readAsNumber<uint8_t>(data, 11);
-
-				switch(tgenFC[i].delayMethod)
-				{
-					case METHOD_CONSTANT:
-					{
-						tgen[i]->fdelay = readAsNumber<uint32_t>(data, 12);
-						break;
-					}
-
-					case METHOD_RAND_UNIFORM:
-					{
-						tgenFC[i].delayBottom = readAsNumber<uint32_t>(data, 16);
-						tgenFC[i].delayTop = readAsNumber<uint32_t>(data, 20) - tgenFC[i].delayBottom + 1;
-						tgen[i]->config |= 1 << 2;
-						break;
-					}
-
-					case METHOD_RAND_POISSON:
-					{
-						tgenFC[i].delayBottom = readAsNumber<uint32_t>(data, 24);
-						tgen[i]->config |= 1 << 2;
-						break;
-					}
-				}
-			}
-
-			uint8_t useBurst = readAsNumber<uint8_t>(data, 28);
+			uint8_t useBurst = readAsNumber<uint8_t>(data, 8);
 
 			if(useBurst)
 			{
-				tgen[i]->burst_time_on = readAsNumber<uint16_t>(data, 29);
-				tgen[i]->burst_time_off = readAsNumber<uint16_t>(data, 31);
+				tgen[i]->burst_time_on = readAsNumber<uint16_t>(data, 9);
+				tgen[i]->burst_time_off = readAsNumber<uint16_t>(data, 11);
 				tgen[i]->config |= 1 << 4;
 			}
 
 			break;
 		}
 
-		case MSG_ID_TG_HEADERS:
+		case MSG_ID_TG_FRAME:
 		{
-			if(data.size() < 15) return;
+			if(data.size() < 15 || data.size() > 2049) return;
 
 			uint8_t i = readAsNumber<uint8_t>(data, 0);
 
 			if((i >= 2 && bitstream != BITSTREAM_QUAD_TGEN) || i >= 4) return;
 
-			tgen[i]->hsize = data.length() - 1;
-			memcpy_v((volatile uint8_t*) tgen[i] + TGEN_MEM_OFFSET, data.constData() + 1, data.length() - 1);
+			memcpy_v((volatile uint8_t*) tgen[i] + TGEN_MEM_FRAME_OFFSET, data.constData() + 1, data.length() - 1);
+
+			break;
+		}
+
+		case MSG_ID_TG_PATTERN:
+		{
+			if(data.size() != 257) return;
+
+			uint8_t i = readAsNumber<uint8_t>(data, 0);
+
+			if((i >= 2 && bitstream != BITSTREAM_QUAD_TGEN) || i >= 4) return;
+
+			memcpy_v((volatile uint8_t*) tgen[i] + TGEN_MEM_PATTERN_OFFSET, data.constData() + 1, data.length() - 1);
 
 			break;
 		}
@@ -377,8 +330,8 @@ void MeasurementServer::onStreamReadyRead()
 		tgen[0]->config = readAsNumber<uint8_t>(m_streamReadBuffer, 0);
 		tgen[1]->config = readAsNumber<uint8_t>(m_streamReadBuffer, 4);
 
-		tgen[0]->psize = readAsNumber<uint16_t>(m_streamReadBuffer, 16);
-		tgen[1]->psize = readAsNumber<uint16_t>(m_streamReadBuffer, 20);
+		tgen[0]->fsize = readAsNumber<uint16_t>(m_streamReadBuffer, 16);
+		tgen[1]->fsize = readAsNumber<uint16_t>(m_streamReadBuffer, 20);
 
 		tgen[0]->fdelay = readAsNumber<uint32_t>(m_streamReadBuffer, 32);
 		tgen[1]->fdelay = readAsNumber<uint32_t>(m_streamReadBuffer, 36);
@@ -388,8 +341,8 @@ void MeasurementServer::onStreamReadyRead()
 			tgen[2]->config = readAsNumber<uint8_t>(m_streamReadBuffer, 8);
 			tgen[3]->config = readAsNumber<uint8_t>(m_streamReadBuffer, 12);
 
-			tgen[2]->psize = readAsNumber<uint16_t>(m_streamReadBuffer, 24);
-			tgen[3]->psize = readAsNumber<uint16_t>(m_streamReadBuffer, 28);
+			tgen[2]->fsize = readAsNumber<uint16_t>(m_streamReadBuffer, 24);
+			tgen[3]->fsize = readAsNumber<uint16_t>(m_streamReadBuffer, 28);
 
 			tgen[2]->fdelay = readAsNumber<uint32_t>(m_streamReadBuffer, 40);
 			tgen[3]->fdelay = readAsNumber<uint32_t>(m_streamReadBuffer, 44);

@@ -18,7 +18,7 @@
 
 #pragma once
 
-#define MSG_VERSION           20190719
+#define MSG_VERSION           20190924
 #define MSG_TCP_PORT   	      5465
 #define MSG_UDP_PORT          5466
 #define MSG_TCP_STREAM_PORT   5467
@@ -35,7 +35,8 @@ enum MessageID
 	MSG_ID_SET_BITSTREAM,
 
 	MSG_ID_TG_CFG,
-	MSG_ID_TG_HEADERS,
+	MSG_ID_TG_FRAME,
+	MSG_ID_TG_PATTERN,
 	MSG_ID_LM_CFG,
 	MSG_ID_FD_CFG,
 	MSG_ID_FD_PATTERNS,

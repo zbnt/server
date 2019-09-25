@@ -20,17 +20,17 @@
 
 #include <cstdint>
 
-#define TGEN_MEM_OFFSET 0x800
+#define TGEN_MEM_FRAME_OFFSET   0x0800
+#define TGEN_MEM_PATTERN_OFFSET 0x1000
 
 typedef struct
 {
 	uint32_t config;
 	uint32_t status;
-	uint32_t hsize;
+	uint32_t fsize;
 	uint32_t fdelay;
-	uint32_t psize;
-	uint16_t psize_occupancy;
-	uint16_t fdelay_occupancy;
 	uint16_t burst_time_on;
 	uint16_t burst_time_off;
+	uint32_t lfsr_seed_req;
+	uint64_t lfsr_seed_val;
 } TrafficGenerator;

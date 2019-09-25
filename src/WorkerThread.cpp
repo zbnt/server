@@ -18,14 +18,10 @@
 
 #include <WorkerThread.hpp>
 
-#include <gsl/gsl_rng.h>
-#include <gsl/gsl_randist.h>
-
 #include <Utils.hpp>
 #include <Messages.hpp>
 #include <BitstreamConfig.hpp>
 
-volatile uint32_t *temac[4] = {nullptr, nullptr, nullptr, nullptr};
 volatile TrafficGenerator *tgen[4] = {nullptr, nullptr, nullptr, nullptr};
 volatile LatencyMeasurer *measurer = nullptr;
 volatile StatsCollector *stats[4] = {nullptr, nullptr, nullptr, nullptr};
@@ -34,11 +30,9 @@ volatile SimpleTimer *timer = nullptr;
 
 uint8_t running = 0;
 uint8_t streamMode = 0;
-TGenFifoConfig tgenFC[4];
 
 QMutex workerMutex;
 QByteArray msgBuffer;
-gsl_rng *rng = nullptr;
 
 double dataRate[4];
 uint64_t lastTxBytesCount[4], lastTxBytesTime[4];
@@ -46,8 +40,6 @@ uint64_t lastTxBytesCount[4], lastTxBytesTime[4];
 void workerThread()
 {
 	msgBuffer.reserve(2048);
-
-	rng = gsl_rng_alloc(gsl_rng_mt19937);
 
 	resetPL();
 
@@ -57,18 +49,6 @@ void workerThread()
 
 		if(!streamMode)
 		{
-			if(timer->status)
-			{
-				writeFIFO(tgen[0], &tgenFC[0]);
-				writeFIFO(tgen[1], &tgenFC[1]);
-
-				if(bitstream == BITSTREAM_QUAD_TGEN)
-				{
-					writeFIFO(tgen[2], &tgenFC[2]);
-					writeFIFO(tgen[3], &tgenFC[3]);
-				}
-			}
-
 			if(running)
 			{
 				uint32_t countRead = 0;
@@ -134,16 +114,6 @@ void resetPL()
 	tgen[0]->config = 2;
 	tgen[1]->config = 2;
 
-	temac[0][0x101] = 0x9000FFFF;
-	temac[1][0x101] = 0x9000FFFF;
-	temac[2][0x101] = 0x9000FFFF;
-	temac[3][0x101] = 0x9000FFFF;
-
-	temac[0][0x102] = 0x90000000;
-	temac[1][0x102] = 0x90000000;
-	temac[2][0x102] = 0x90000000;
-	temac[3][0x102] = 0x90000000;
-
 	switch(bitstream)
 	{
 		case BITSTREAM_DUAL_TGEN_LATENCY:
@@ -195,74 +165,6 @@ void resetPL()
 			tgen[2]->config = 0;
 			tgen[3]->config = 0;
 			break;
-		}
-	}
-}
-
-void fillFIFO()
-{
-	for(int i = 0; i < 4; ++i)
-	{
-		if(i >= 2 && bitstream != BITSTREAM_QUAD_TGEN) break;
-
-		while((tgenFC[i].delayMethod != METHOD_CONSTANT && tgen[i]->fdelay_occupancy <= 2000) || (tgenFC[i].paddingMethod != METHOD_CONSTANT && tgen[i]->psize_occupancy <= 2000))
-		{
-			writeFIFO(tgen[i], &tgenFC[i]);
-		}
-	}
-}
-
-void writeFIFO(volatile TrafficGenerator *tg, TGenFifoConfig *fcfg)
-{
-	if(!(tg->config & 1)) return;
-
-	if(tg->fdelay_occupancy <= 2000)
-	{
-		switch(fcfg->delayMethod)
-		{
-			case METHOD_RAND_UNIFORM:
-			{
-				tg->fdelay = gsl_rng_uniform_int(rng, fcfg->delayTop) + fcfg->delayBottom;
-				break;
-			}
-
-			case METHOD_RAND_POISSON:
-			{
-				uint32_t mu = fcfg->delayBottom * fcfg->delayPoissonCount;
-
-				if(mu <= std::numeric_limits<uint32_t>::max() - fcfg->delayBottom)
-				{
-					fcfg->delayPoissonCount++;
-				}
-
-				tg->fdelay = gsl_ran_poisson(rng, mu);
-				break;
-			}
-		}
-	}
-
-	if(tg->psize_occupancy <= 2000)
-	{
-		switch(fcfg->paddingMethod)
-		{
-			case METHOD_RAND_UNIFORM:
-			{
-				tg->psize = gsl_rng_uniform_int(rng, fcfg->paddingTop) + fcfg->paddingBottom;
-				break;
-			}
-
-			case METHOD_RAND_POISSON:
-			{
-				uint32_t mu = fcfg->paddingBottom * fcfg->paddingPoissonCount;
-
-				if(mu <= 1500u - fcfg->paddingBottom)
-				{
-					fcfg->paddingPoissonCount++;
-				}
-
-				tg->psize = gsl_ran_poisson(rng, mu);
-				break;
-			}
 		}
 	}
 }
