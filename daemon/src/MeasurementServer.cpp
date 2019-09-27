@@ -165,7 +165,7 @@ void MeasurementServer::onMessageReceived(quint8 id, const QByteArray &data)
 
 		case MSG_ID_TG_CFG:
 		{
-			if(data.size() < 21) return;
+			if(data.size() < 14) return;
 
 			uint8_t i = readAsNumber<uint8_t>(data, 0);
 
@@ -174,8 +174,8 @@ void MeasurementServer::onMessageReceived(quint8 id, const QByteArray &data)
 			tgen[i]->config = readAsNumber<uint8_t>(data, 1);
 			tgen[i]->fsize = readAsNumber<uint16_t>(data, 2);
 			tgen[i]->fdelay = readAsNumber<uint32_t>(data, 4);
-			tgen[i]->lfsr_seed_val = readAsNumber<uint64_t>(data, 13);
-			tgen[i]->lfsr_seed_req = 1;
+			tgen[i]->lfsr_seed_val = readAsNumber<uint8_t>(data, 13);
+			tgen[i]->config |= 1 << 3;
 
 			uint8_t useBurst = readAsNumber<uint8_t>(data, 8);
 
@@ -183,7 +183,7 @@ void MeasurementServer::onMessageReceived(quint8 id, const QByteArray &data)
 			{
 				tgen[i]->burst_time_on = readAsNumber<uint16_t>(data, 9);
 				tgen[i]->burst_time_off = readAsNumber<uint16_t>(data, 11);
-				tgen[i]->config |= 1 << 4;
+				tgen[i]->config |= 1 << 2;
 			}
 
 			break;

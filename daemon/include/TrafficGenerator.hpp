@@ -31,6 +31,5 @@ typedef struct
 	uint32_t fdelay;
 	uint16_t burst_time_on;
 	uint16_t burst_time_off;
-	uint32_t lfsr_seed_req;
-	uint64_t lfsr_seed_val;
+	uint8_t lfsr_seed_val;
 } TrafficGenerator;

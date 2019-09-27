@@ -62,7 +62,7 @@ int main(int argc, char **argv)
 
 	// Program PL
 
-	if(!programPL(BITSTREAM_DUAL_TGEN_LATENCY))
+	if(!programPL(BITSTREAM_QUAD_TGEN))
 	{
 		return EXIT_FAILURE;
 	}
