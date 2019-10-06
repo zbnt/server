@@ -1,7 +1,7 @@
 
 # zbnt_sw
 
-Board software for ZBNT, a configurable network tester for Xilinx FPGAs/SoCs
+Board software for ZBNT, a set of network tools for Xilinx FPGAs/SoCs
 
 ## Related projects
 
@@ -17,15 +17,20 @@ Board software for ZBNT, a configurable network tester for Xilinx FPGAs/SoCs
 ## Building
 
 1. Clone this repository, make sure all dependencies are installed before proceeding.
-2. Create a directory for the build, `cd` to it and run `cmake`:
+2. Create a directory for the build and `cd` to it:
 
 ~~~~
 mkdir build
 cd build
-cmake -DCMAKE_BUILD_TYPE=Release ..
 ~~~~
 
-3. Run `make`, you can use the `-j` parameter to control the number of parallel jobs:
+3. Run `cmake`, specify which projects to build:
+
+~~~~
+cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_GUI=ON -DBUILD_DAEMON=ON ..
+~~~~
+
+4. Run `make`, you can use the `-j` parameter to control the number of parallel jobs:
 
 ~~~
 make -j16
