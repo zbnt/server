@@ -21,6 +21,7 @@
 #include <QNetworkInterface>
 
 #include <Utils.hpp>
+#include <Settings.hpp>
 #include <WorkerThread.hpp>
 #include <BitstreamConfig.hpp>
 
@@ -32,10 +33,10 @@ MeasurementServer::MeasurementServer(QObject *parent) : QObject(parent)
 	m_timer->start();
 
 	m_server = new QTcpServer(this);
-	m_server->listen(QHostAddress::Any, MSG_TCP_PORT);
+	m_server->listen(QHostAddress::Any, daemonCfg.mainPort);
 
 	m_streamServer = new QTcpServer(this);
-	m_streamServer->listen(QHostAddress::Any, MSG_TCP_STREAM_PORT);
+	m_streamServer->listen(QHostAddress::Any, daemonCfg.streamPort);
 
 	connect(m_timer, &QTimer::timeout, this, &MeasurementServer::sendMeasurements);
 	connect(m_server, &QTcpServer::newConnection, this, &MeasurementServer::onIncomingConnection);

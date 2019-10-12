@@ -23,6 +23,7 @@
 #include <QNetworkInterface>
 
 #include <Utils.hpp>
+#include <Settings.hpp>
 
 DiscoveryServer::DiscoveryServer(QObject *parent) : QObject(parent)
 {
@@ -49,7 +50,7 @@ DiscoveryServer::DiscoveryServer(QObject *parent) : QObject(parent)
 
 	if(!broadcastAddr.isNull())
 	{
-		m_server->bind(broadcastAddr, MSG_UDP_PORT);
+		m_server->bind(broadcastAddr, MSG_DISCOVERY_PORT);
 	}
 }
 
@@ -110,7 +111,7 @@ void DiscoveryServer::onReadyRead()
 
 			discoveryResponse.append(MSG_MAGIC_IDENTIFIER, 4);
 			appendAsBytes<quint8>(&discoveryResponse, MSG_ID_DISCOVERY_RESP);
-			appendAsBytes<quint16>(&discoveryResponse, 4 + 8 + 4 + 16 + host.length());
+			appendAsBytes<quint16>(&discoveryResponse, 4 + 8 + 4 + 16 + 4 + host.length());
 			appendAsBytes<quint32>(&discoveryResponse, MSG_VERSION);
 			discoveryResponse.append(m_recvdTime);
 
@@ -131,6 +132,9 @@ void DiscoveryServer::onReadyRead()
 			{
 				discoveryResponse.append(16, '\0');
 			}
+
+			appendAsBytes<quint16>(&discoveryResponse, daemonCfg.mainPort);
+			appendAsBytes<quint16>(&discoveryResponse, daemonCfg.streamPort);
 
 			discoveryResponse.append(host);
 
