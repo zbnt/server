@@ -18,10 +18,8 @@
 
 #pragma once
 
-#define MSG_VERSION           20190926
-#define MSG_TCP_PORT   	      5465
-#define MSG_UDP_PORT          5466
-#define MSG_TCP_STREAM_PORT   5467
+#define MSG_VERSION           20191012
+#define MSG_DISCOVERY_PORT    5466
 #define MSG_MAGIC_IDENTIFIER  "\x4D\x60\x64\x5A"
 
 enum MessageID
