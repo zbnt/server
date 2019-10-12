@@ -98,7 +98,7 @@ void DiscoveryServer::onReadyRead()
 					}
 					else
 					{
-						if(ip6.isNull() || ip6.isLinkLocal())
+						if(ip6.isNull() && !ip6.isLinkLocal())
 						{
 							ip6 = address.ip();
 						}
