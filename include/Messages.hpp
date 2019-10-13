@@ -18,7 +18,7 @@
 
 #pragma once
 
-#define MSG_VERSION           20191012
+#define MSG_VERSION           20191013
 #define MSG_DISCOVERY_PORT    5466
 #define MSG_MAGIC_IDENTIFIER  "\x4D\x60\x64\x5A"
 

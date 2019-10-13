@@ -20,9 +20,11 @@
 
 #include <cstdint>
 
-#define FD_MEM_A_OFFSET 0x2000
-#define FD_MEM_B_OFFSET 0x4000
-#define FD_MEM_SIZE     1536 * 4
+#define FD_PATTERN_A_DATA_OFFSET  0x2000
+#define FD_PATTERN_A_FLAGS_OFFSET 0x4000
+#define FD_PATTERN_B_DATA_OFFSET  0x6000
+#define FD_PATTERN_B_FLAGS_OFFSET 0x8000
+#define FD_MEM_SIZE               8192
 
 typedef struct
 {

@@ -238,24 +238,20 @@ void MeasurementServer::onMessageReceived(quint8 id, const QByteArray &data)
 			if(data.size() < 2) return;
 			if(bitstream != BITSTREAM_DUAL_TGEN_DETECTOR) return;
 
-			detector->config = (readAsNumber<uint8_t>(data, 0) & 0b1) | ((readAsNumber<uint8_t>(data, 1) & 0b111111) << 2);
+			detector->config = (readAsNumber<uint8_t>(data, 0) & 0b1) | ((readAsNumber<uint8_t>(data, 1) & 0b1111'1111) << 2);
 			break;
 		}
 
 		case MSG_ID_FD_PATTERNS:
 		{
-			if(data.size() < FD_MEM_SIZE + 1) return;
+			if(data.size() < FD_MEM_SIZE*4 + 1) return;
 			if(bitstream != BITSTREAM_DUAL_TGEN_DETECTOR) return;
 
 			uint8_t i = readAsNumber<uint8_t>(data, 0);
 
 			if(!i)
 			{
-				memcpy_v((volatile uint8_t*) detector + FD_MEM_A_OFFSET, data.constData() + 1, FD_MEM_SIZE);
-			}
-			else
-			{
-				memcpy_v((volatile uint8_t*) detector + FD_MEM_B_OFFSET, data.constData() + 1, FD_MEM_SIZE);
+				memcpy_v((volatile uint8_t*) detector + FD_PATTERN_A_DATA_OFFSET, data.constData() + 1, FD_MEM_SIZE*4);
 			}
 
 			break;
