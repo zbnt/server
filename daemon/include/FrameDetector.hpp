@@ -31,8 +31,13 @@ typedef struct
 	uint32_t config;
 	uint32_t fifo_occupancy;
 	uint32_t fifo_pop;
+	uint32_t _reserved;
 
 	uint32_t time_l;
 	uint32_t time_h;
-	uint32_t matched_patterns;
+	uint8_t match_dir;
+	uint8_t match_mask;
+	uint8_t match_ext_num;
+	uint8_t _reserved2;
+	uint8_t match_ext_data[16];
 } FrameDetector;

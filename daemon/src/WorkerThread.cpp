@@ -198,7 +198,7 @@ uint32_t readFIFO(volatile FrameDetector *fd)
 	if(fd->fifo_occupancy)
 	{
 		fd->fifo_pop = 1;
-		buildMessage(MSG_ID_MEASUREMENT_FD, (volatile uint32_t*) &(fd->time_l), 3);
+		buildMessage(MSG_ID_MEASUREMENT_FD, (volatile uint32_t*) &(fd->time_l), 7);
 		return 1;
 	}
 
