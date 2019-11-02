@@ -235,10 +235,12 @@ void MeasurementServer::onMessageReceived(quint8 id, const QByteArray &data)
 
 		case MSG_ID_FD_CFG:
 		{
-			if(data.size() < 2) return;
+			if(data.size() < 3) return;
 			if(bitstream != BITSTREAM_DUAL_TGEN_DETECTOR) return;
 
-			detector->config = (readAsNumber<uint8_t>(data, 0) & 0b1) | ((readAsNumber<uint8_t>(data, 1) & 0b1111'1111) << 2);
+			detector->config = readAsNumber<uint8_t>(data, 0) & 0b1;
+			detector->config |= (readAsNumber<uint8_t>(data, 1) & 0b1111'1111) << 2;
+			detector->config |= (readAsNumber<uint8_t>(data, 2) & 0b1) << 10;
 			break;
 		}
 
