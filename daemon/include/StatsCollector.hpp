@@ -25,7 +25,7 @@ typedef struct
 	uint32_t config;
 	uint32_t fifo_occupancy;
 	uint32_t fifo_pop;
-	uint32_t _reserved;
+	uint32_t sample_period;
 
 	uint64_t time;
 	uint64_t tx_bytes;

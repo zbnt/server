@@ -91,14 +91,9 @@ void MeasurementServer::onMessageReceived(quint8 id, const QByteArray &data)
 	{
 		case MSG_ID_START:
 		{
-			if(data.size() < 12) return;
+			if(data.size() < 8) return;
 
 			timer->max_time = readAsNumber<uint64_t>(data, 0);
-			stats[0]->config = readAsNumber<uint8_t>(data, 8) | (1 << 3);
-			stats[1]->config = readAsNumber<uint8_t>(data, 9) | (1 << 3);
-			stats[2]->config = readAsNumber<uint8_t>(data, 10) | (1 << 3);
-			stats[3]->config = readAsNumber<uint8_t>(data, 11) | (1 << 3);
-
 			timer->config = 1;
 			running = 1;
 
@@ -165,6 +160,20 @@ void MeasurementServer::onMessageReceived(quint8 id, const QByteArray &data)
 				QThread::sleep(5);
 				resetPL();
 			}
+
+			break;
+		}
+
+		case MSG_ID_SC_CFG:
+		{
+			if(data.size() < 6) return;
+
+			uint8_t i = readAsNumber<uint8_t>(data, 0);
+
+			if(i >= 4) return;
+
+			stats[i]->config = readAsNumber<uint8_t>(data, 1) | (1 << 3);
+			stats[i]->sample_period = readAsNumber<uint32_t>(data, 2);
 
 			break;
 		}
