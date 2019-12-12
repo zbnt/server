@@ -20,13 +20,7 @@
 
 #include <Utils.hpp>
 #include <Messages.hpp>
-#include <BitstreamConfig.hpp>
-
-volatile TrafficGenerator *tgen[4] = {nullptr, nullptr, nullptr, nullptr};
-volatile LatencyMeasurer *measurer = nullptr;
-volatile StatsCollector *stats[4] = {nullptr, nullptr, nullptr, nullptr};
-volatile FrameDetector *detector = nullptr;
-volatile SimpleTimer *timer = nullptr;
+#include <BitstreamManager.hpp>
 
 uint8_t running = 0;
 uint8_t streamMode = 0;
@@ -47,7 +41,7 @@ void workerThread()
 	{
 		QMutexLocker lock(&workerMutex);
 
-		if(!streamMode)
+		/*if(!streamMode)
 		{
 			if(running)
 			{
@@ -98,13 +92,13 @@ void workerThread()
 					stats[i]->config &= ~(1 << 2);
 				}
 			}
-		}
+		}*/
 	}
 }
 
 void resetPL()
 {
-	timer->config = 2;
+	/*timer->config = 2;
 
 	stats[0]->config = 2;
 	stats[1]->config = 2;
@@ -166,9 +160,9 @@ void resetPL()
 			tgen[3]->config = 0;
 			break;
 		}
-	}
+	}*/
 }
-
+/*
 uint32_t readFIFO(volatile StatsCollector *sc, uint8_t idx)
 {
 	if(sc->fifo_occupancy)
@@ -203,7 +197,7 @@ uint32_t readFIFO(volatile FrameDetector *fd)
 	}
 
 	return 0;
-}
+}*/
 
 void buildMessage(uint8_t id, volatile uint32_t *data, uint32_t numWords)
 {

@@ -18,18 +18,34 @@
 
 #pragma once
 
-#include <cstdint>
+#include <QByteArray>
 
-#define TGEN_MEM_FRAME_OFFSET   0x0800
-#define TGEN_MEM_PATTERN_OFFSET 0x1000
-
-typedef struct
+enum DeviceType
 {
-	uint32_t config;
-	uint32_t status;
-	uint32_t fsize;
-	uint32_t fdelay;
-	uint16_t burst_time_on;
-	uint16_t burst_time_off;
-	uint8_t lfsr_seed_val;
-} TrafficGenerator;
+	DEV_AXI_DMA = 1,
+	DEV_DMA_BUFFER,
+	DEV_SIMPLE_TIMER,
+	DEV_FRAME_DETECTOR,
+	DEV_STATS_COLLECTOR,
+	DEV_LATENCY_MEASURER,
+	DEV_TRAFFIC_GENERATOR
+};
+
+class AbstractDevice
+{
+public:
+	AbstractDevice(const QByteArray &name);
+	virtual ~AbstractDevice();
+
+	virtual DeviceType getType() = 0;
+	virtual uint32_t getIdentifier() = 0;
+
+	virtual bool loadDevice(const void *fdt, int offset) = 0;
+
+	virtual void setReset(bool reset) = 0;
+	virtual bool setProperty(const QByteArray &key, const QByteArray &value) = 0;
+	virtual bool getProperty(const QByteArray &key, QByteArray &value) = 0;
+
+protected:
+	QByteArray m_name;
+};

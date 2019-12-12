@@ -30,18 +30,18 @@ void loadSettings(const char *path, const char *profile)
 	QSettings cfg(path, QSettings::IniFormat);
 	cfg.beginGroup(profile);
 
-	qInfo("[cfg] Loading %s", path);
-	qInfo("[cfg] Active profile: %s", profile);
+	qInfo("[cfg] I: Loading %s", path);
+	qInfo("[cfg] I: Active profile: %s", profile);
 
 	if(!QFile::exists(path))
-		qFatal("[cfg] Configuration file does not exist");
+		qFatal("[cfg] F: Configuration file does not exist");
 
 	// Check for required keys
 
 	for(auto k : {"mode", "mem_dev", "mem_base"})
 	{
 		if(!cfg.contains(k))
-			qFatal("[cfg] Missing configuration key: %s", k);
+			qFatal("[cfg] F: Missing configuration key: %s", k);
 	}
 
 	//
@@ -49,27 +49,13 @@ void loadSettings(const char *path, const char *profile)
 	QString mode = cfg.value("mode").toString().toLower();
 
 	if(mode != "pcie" && mode != "axi")
-		qFatal("[cfg] Invalid value for type, valid values: axi, pcie");
+		qFatal("[cfg] F: Invalid value for type, valid values: axi, pcie");
 
 	daemonCfg.mode = (mode == "axi") ? MODE_AXI : MODE_PCIE;
 
 	//
 
-	daemonCfg.memDevice = cfg.value("mem_dev").toString();
-
-	if(!QFile::exists(daemonCfg.memDevice))
-		qFatal("[cfg] Invalid value for mem_dev, file does not exist");
-
-	//
-
 	bool ok = false;
-	daemonCfg.memBase = cfg.value("mem_base").toString().toULongLong(&ok, 16);
-
-	if(!ok)
-		qFatal("[cfg] Invalid value for mem_base");
-
-	//
-
 	daemonCfg.mainPort = 5464;
 
 	if(cfg.contains("main_port"))
@@ -82,7 +68,7 @@ void loadSettings(const char *path, const char *profile)
 		}
 		else
 		{
-			qWarning("[cfg] Invalid value for main_port, using default value: 5464");
+			qWarning("[cfg] W: Invalid value for main_port, using default value: 5464");
 		}
 	}
 
@@ -100,7 +86,7 @@ void loadSettings(const char *path, const char *profile)
 		}
 		else
 		{
-			qWarning("[cfg] Invalid value for stream_port, using default value: 5465");
+			qWarning("[cfg] W: Invalid value for stream_port, using default value: 5465");
 		}
 	}
 }

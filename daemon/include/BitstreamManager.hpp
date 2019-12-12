@@ -20,18 +20,21 @@
 
 #include <cstdint>
 
-typedef struct
-{
-	uint32_t config;
-	uint32_t fifo_occupancy;
-	uint32_t fifo_pop;
-	uint32_t sample_period;
+#include <QHash>
+#include <QVector>
 
-	uint64_t time;
-	uint64_t tx_bytes;
-	uint64_t tx_good;
-	uint64_t tx_bad;
-	uint64_t rx_bytes;
-	uint64_t rx_good;
-	uint64_t rx_bad;
-} StatsCollector;
+#include <dev/AxiDma.hpp>
+#include <dev/DmaBuffer.hpp>
+#include <dev/SimpleTimer.hpp>
+
+extern QVector<QString> g_bitstreamList;
+extern QHash<QByteArray, QByteArray> g_uioMap;
+
+extern AxiDma *g_axiDma;
+extern DmaBuffer *g_dmaBuffer;
+extern SimpleTimer *g_axiTimer;
+extern QVector<AbstractDevice*> g_deviceList;
+
+void initBitstreamManager();
+bool loadBitstream(const QString &bitstreamName);
+bool loadDeviceTree(const QString &dtboName, const QByteArray &dtboContents);

@@ -13,6 +13,7 @@ Board software for ZBNT, a set of network tools for Xilinx FPGAs/SoCs
 * A working GNU/Linux system with the following libraries/tools:
 	* Qt5
 	* CMake
+	* libfdt
 
 ## Building
 

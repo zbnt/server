@@ -28,8 +28,8 @@
 #include <Utils.hpp>
 #include <Settings.hpp>
 #include <WorkerThread.hpp>
-#include <BitstreamConfig.hpp>
 #include <DiscoveryServer.hpp>
+#include <BitstreamManager.hpp>
 #include <MeasurementServer.hpp>
 
 int main(int argc, char **argv)
@@ -40,11 +40,11 @@ int main(int argc, char **argv)
 
 	if(argc <= 1)
 	{
-		loadSettings(ZBNT_DAEMON_CFG_PATH "/daemon.cfg", "default");
+		loadSettings(ZBNT_CFG_PATH "/daemon.cfg", "default");
 	}
 	else if(argc == 2)
 	{
-		loadSettings(ZBNT_DAEMON_CFG_PATH "/daemon.cfg", argv[1]);
+		loadSettings(ZBNT_CFG_PATH "/daemon.cfg", argv[1]);
 	}
 	else if(argc == 3)
 	{
@@ -56,44 +56,11 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	qInfo("[mem] Mode: %s", daemonCfg.mode == MODE_AXI ? "AXI" : "PCIe");
-	qInfo("[mem] Device: %s", qUtf8Printable(daemonCfg.memDevice));
-	qInfo("[mem] Base address: 0x%llX", daemonCfg.memBase);
-
-	if(daemonCfg.mode == MODE_PCIE)
-		qFatal("[mem] PCIe mode not yet implemented");
-
-	// Map memory block
-
-	int fd = open(daemonCfg.memDevice.toLocal8Bit().data(), O_RDWR | O_SYNC);
-
-	if(fd == -1)
-		qFatal("[mem] open() returned -1");
-
-	volatile void *memBase = mmap(NULL, 0xD0000, PROT_READ | PROT_WRITE, MAP_SHARED, fd, daemonCfg.memBase);
-
-	if(!memBase)
-		qFatal("[mem] mmap() returned NULL");
-
-	timer = makePointer<SimpleTimer>(memBase, 0x00000);
-
-	stats[0] = makePointer<StatsCollector>(memBase, 0x10000);
-	stats[1] = makePointer<StatsCollector>(memBase, 0x20000);
-	stats[2] = makePointer<StatsCollector>(memBase, 0x30000);
-	stats[3] = makePointer<StatsCollector>(memBase, 0x40000);
-
-	tgen[0] = makePointer<TrafficGenerator>(memBase, 0x50000);
-	tgen[1] = makePointer<TrafficGenerator>(memBase, 0x60000);
-	tgen[2] = makePointer<TrafficGenerator>(memBase, 0x70000);
-	tgen[3] = makePointer<TrafficGenerator>(memBase, 0x80000);
-
-	measurer = makePointer<LatencyMeasurer>(memBase, 0x90000);
-	detector = makePointer<FrameDetector>(memBase, 0xB0000);
+	qInfo("[mem] I: Running in %s mode", daemonCfg.mode == MODE_AXI ? "AXI" : "PCIe");
 
 	// Program PL
 
-	if(!programPL(BITSTREAM_QUAD_TGEN))
-		qDebug("[prog] Failed to program initial bitstream");
+	initBitstreamManager();
 
 	// Initialize Qt application
 

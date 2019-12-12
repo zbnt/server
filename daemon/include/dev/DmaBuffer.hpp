@@ -20,19 +20,25 @@
 
 #include <cstdint>
 
-typedef struct
-{
-	uint32_t config;
-	uint32_t padding;
-	uint32_t delay;
-	uint32_t timeout;
-	uint32_t fifo_occupancy;
-	uint32_t fifo_pop;
+#include <dev/AbstractDevice.hpp>
 
-	uint64_t time;
-	uint32_t ping_latency;
-	uint32_t pong_latency;
-	uint64_t ping_pong_good;
-	uint64_t pings_lost;
-	uint64_t pongs_lost;
-} LatencyMeasurer;
+class DmaBuffer : public AbstractDevice
+{
+public:
+	DmaBuffer(const QByteArray &name);
+	~DmaBuffer();
+
+	DeviceType getType();
+	uint32_t getIdentifier();
+
+	bool loadDevice(const void *fdt, int offset);
+
+	void setReset(bool reset);
+	bool setProperty(const QByteArray &key, const QByteArray &value);
+	bool getProperty(const QByteArray &key, QByteArray &value);
+
+private:
+	uint8_t *m_ptr;
+	size_t m_memSize;
+};
+

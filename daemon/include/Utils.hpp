@@ -19,8 +19,14 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 
 #include <QByteArray>
+
+extern "C"
+{
+	#include <libfdt.h>
+};
 
 template<typename T>
 constexpr volatile T *makePointer(volatile void *base, uint32_t offset)
@@ -48,3 +54,44 @@ T readAsNumber(const QByteArray &data, quint32 offset)
 }
 
 extern void memcpy_v(volatile void *dst, volatile const void *src, uint32_t count);
+
+extern bool fdtEnumerateDevices(const void *fdt, int offset, const std::function<bool(const QByteArray&, int)> &callback);
+extern bool fdtGetStringProp(const void *fdt, int offset, const char *name, QByteArray &out);
+
+template<typename T>
+bool fdtArrayToVars(const uint8_t *data, int len, T &out)
+{
+	out = 0;
+
+	if(len < 4)
+	{
+		return false;
+	}
+
+	for(int i = 0; i < 4; ++i)
+	{
+		out = (out << 8) | data[i];
+	}
+
+	return true;
+}
+
+template<typename T, typename... Ts>
+bool fdtArrayToVars(const uint8_t *data, int len, T &out, Ts& ...args)
+{
+	return fdtArrayToVars(data, len, out) && fdtArrayToVars(data + 4, len - 4, args...);
+}
+
+template<typename... Ts>
+bool fdtGetArrayProp(const void *fdt, int offset, const char *name, Ts& ...args)
+{
+	int len = 0;
+	const void *data = fdt_getprop(fdt, offset, name, &len);
+
+	if(!data)
+	{
+		return false;
+	}
+
+	return fdtArrayToVars((const uint8_t*) data, len, args...);
+}

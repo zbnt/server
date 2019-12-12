@@ -23,7 +23,7 @@
 #include <Utils.hpp>
 #include <Settings.hpp>
 #include <WorkerThread.hpp>
-#include <BitstreamConfig.hpp>
+#include <BitstreamManager.hpp>
 
 MeasurementServer::MeasurementServer(QObject *parent) : QObject(parent)
 {
@@ -86,7 +86,7 @@ void MeasurementServer::sendMeasurements()
 void MeasurementServer::onMessageReceived(quint8 id, const QByteArray &data)
 {
 	QMutexLocker lock(&workerMutex);
-
+/*
 	switch(id)
 	{
 		case MSG_ID_START:
@@ -267,7 +267,7 @@ void MeasurementServer::onMessageReceived(quint8 id, const QByteArray &data)
 
 			break;
 		}
-	}
+	}*/
 }
 
 void MeasurementServer::onIncomingConnection()
@@ -346,7 +346,7 @@ void MeasurementServer::onStreamReadyRead()
 	{
 		QMutexLocker lock(&workerMutex);
 
-		tgen[0]->config = readAsNumber<uint8_t>(m_streamReadBuffer, 0);
+		/*tgen[0]->config = readAsNumber<uint8_t>(m_streamReadBuffer, 0);
 		tgen[1]->config = readAsNumber<uint8_t>(m_streamReadBuffer, 4);
 
 		tgen[0]->fsize = readAsNumber<uint16_t>(m_streamReadBuffer, 16);
@@ -365,7 +365,7 @@ void MeasurementServer::onStreamReadyRead()
 
 			tgen[2]->fdelay = readAsNumber<uint32_t>(m_streamReadBuffer, 40);
 			tgen[3]->fdelay = readAsNumber<uint32_t>(m_streamReadBuffer, 44);
-		}
+		}*/
 	}
 }
 

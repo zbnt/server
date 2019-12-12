@@ -28,3 +28,35 @@ void memcpy_v(volatile void *dst, volatile const void *src, uint32_t count)
 		*dst8++ = *src8++;
 	}
 }
+
+bool fdtEnumerateDevices(const void *fdt, int offset, const std::function<bool(const QByteArray&, int)> &callback)
+{
+	for(int node = fdt_first_subnode(fdt, offset); node >= 0; node = fdt_next_subnode(fdt, node))
+	{
+		int nameLen = 0;
+		const char *name = fdt_get_name(fdt, node, &nameLen);
+
+		if(!callback(QByteArray(name, nameLen), node))
+		{
+			return false;
+		}
+
+		fdtEnumerateDevices(fdt, node, callback);
+	}
+
+	return true;
+}
+
+bool fdtGetStringProp(const void *fdt, int offset, const char *name, QByteArray &out)
+{
+	int len = 0;
+	const void *data = fdt_getprop(fdt, offset, name, &len);
+
+	if(!data)
+	{
+		return false;
+	}
+
+	out = QByteArray((const char*) data, len);
+	return true;
+}

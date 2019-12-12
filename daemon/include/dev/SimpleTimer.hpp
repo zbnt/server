@@ -16,43 +16,38 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <BitstreamConfig.hpp>
+#pragma once
 
-#include <QFile>
+#include <cstdint>
 
-uint8_t bitstream = BITSTREAM_NONE;
+#include <dev/AbstractDevice.hpp>
 
-bool programPL(BitstreamID bid)
+class SimpleTimer : public AbstractDevice
 {
-	QFile plConfig("/sys/class/fpga_manager/fpga0/firmware");
-
-	if(!plConfig.open(QIODevice::WriteOnly)) return false;
-
-	switch(bid)
+public:
+	struct Registers
 	{
-		case BITSTREAM_DUAL_TGEN_LATENCY:
-		{
-			plConfig.write("zbnt/dual_tgen_latency.bin");
-			break;
-		}
+		uint32_t config;
+		uint32_t status;
 
-		case BITSTREAM_DUAL_TGEN_DETECTOR:
-		{
-			plConfig.write("zbnt/dual_tgen_detector.bin");
-			break;
-		}
+		uint64_t max_time;
+		uint64_t current_time;
+	};
 
-		case BITSTREAM_QUAD_TGEN:
-		{
-			plConfig.write("zbnt/quad_tgen.bin");
-			break;
-		}
+public:
+	SimpleTimer(const QByteArray &name);
+	~SimpleTimer();
 
-		default: return false;
-	}
+	DeviceType getType();
+	uint32_t getIdentifier();
 
-	plConfig.close();
+	bool loadDevice(const void *fdt, int offset);
 
-	bitstream = bid;
-	return true;
-}
+	void setReset(bool reset);
+	bool setProperty(const QByteArray &key, const QByteArray &value);
+	bool getProperty(const QByteArray &key, QByteArray &value);
+
+private:
+	volatile Registers *m_regs;
+	size_t m_regsSize;
+};

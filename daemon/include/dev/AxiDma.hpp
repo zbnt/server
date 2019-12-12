@@ -20,11 +20,31 @@
 
 #include <cstdint>
 
-typedef struct
-{
-	uint32_t config;
-	uint32_t status;
+#include <dev/AbstractDevice.hpp>
 
-	uint64_t max_time;
-	uint64_t current_time;
-} SimpleTimer;
+class AxiDma : public AbstractDevice
+{
+public:
+	struct Registers
+	{
+		// TODO
+		uint32_t _unknown;
+	};
+
+public:
+	AxiDma(const QByteArray &name);
+	~AxiDma();
+
+	DeviceType getType();
+	uint32_t getIdentifier();
+
+	bool loadDevice(const void *fdt, int offset);
+
+	void setReset(bool reset);
+	bool setProperty(const QByteArray &key, const QByteArray &value);
+	bool getProperty(const QByteArray &key, QByteArray &value);
+
+private:
+	volatile Registers *m_regs;
+	size_t m_regsSize;
+};

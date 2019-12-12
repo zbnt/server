@@ -20,24 +20,49 @@
 
 #include <cstdint>
 
+#include <dev/AbstractDevice.hpp>
+
 #define FD_PATTERN_A_DATA_OFFSET  0x2000
 #define FD_PATTERN_A_FLAGS_OFFSET 0x4000
 #define FD_PATTERN_B_DATA_OFFSET  0x6000
 #define FD_PATTERN_B_FLAGS_OFFSET 0x8000
 #define FD_MEM_SIZE               8192
 
-typedef struct
+class FrameDetector : public AbstractDevice
 {
-	uint32_t config;
-	uint32_t fifo_occupancy;
-	uint32_t fifo_pop;
-	uint32_t _reserved;
+public:
+	struct Registers
+	{
+		uint32_t config;
+		uint32_t fifo_occupancy;
+		uint32_t fifo_pop;
+		uint32_t _reserved;
 
-	uint32_t time_l;
-	uint32_t time_h;
-	uint8_t match_dir;
-	uint8_t match_mask;
-	uint8_t match_ext_num;
-	uint8_t _reserved2;
-	uint8_t match_ext_data[16];
-} FrameDetector;
+		uint32_t time_l;
+		uint32_t time_h;
+		uint8_t match_dir;
+		uint8_t match_mask;
+		uint8_t match_ext_num;
+		uint8_t _reserved2;
+		uint8_t match_ext_data[16];
+	};
+
+public:
+	FrameDetector(const QByteArray &name);
+	~FrameDetector();
+
+	DeviceType getType();
+	uint32_t getIdentifier();
+
+	bool loadDevice(const void *fdt, int offset);
+
+	void setReset(bool reset);
+	bool setProperty(const QByteArray &key, const QByteArray &value);
+	bool getProperty(const QByteArray &key, QByteArray &value);
+
+private:
+	volatile Registers *m_regs;
+	size_t m_regsSize;
+
+	uint8_t m_portA, m_portB;
+};

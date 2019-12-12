@@ -35,9 +35,6 @@ struct DaemonConfig
 
 	quint16 mainPort;
 	quint16 streamPort;
-
-	QString memDevice;
-	quint64 memBase;
 };
 
 extern DaemonConfig daemonCfg;

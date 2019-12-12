@@ -1,3 +1,4 @@
+.directory
 *.kdev4
 build/
 hw/

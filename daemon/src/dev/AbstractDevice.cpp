@@ -16,18 +16,11 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#pragma once
+#include <dev/AbstractDevice.hpp>
 
-#include <cstdint>
+AbstractDevice::AbstractDevice(const QByteArray &name)
+	: m_name(name)
+{ }
 
-enum BitstreamID
-{
-	BITSTREAM_NONE,
-	BITSTREAM_DUAL_TGEN_LATENCY,
-	BITSTREAM_DUAL_TGEN_DETECTOR,
-	BITSTREAM_QUAD_TGEN
-};
-
-extern uint8_t bitstream;
-
-extern bool programPL(BitstreamID bid);
+AbstractDevice::~AbstractDevice()
+{ }
