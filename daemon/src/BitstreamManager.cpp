@@ -28,6 +28,7 @@
 #include <sys/mman.h>
 
 #include <Utils.hpp>
+#include <Settings.hpp>
 #include <dev/AxiDma.hpp>
 #include <dev/DmaBuffer.hpp>
 #include <dev/SimpleTimer.hpp>
@@ -47,7 +48,7 @@ QVector<AbstractDevice*> g_deviceList;
 
 void initBitstreamManager()
 {
-	QDirIterator it(ZBNT_FIRMWARE_PATH, QDir::Files);
+	QDirIterator it(ZBNT_FIRMWARE_PATH "/" + g_daemonCfg.deviceName, QDir::Files);
 
 	while(it.hasNext())
 	{
@@ -60,7 +61,7 @@ void initBitstreamManager()
 		}
 
 		QString dtboName = binName.chopped(4) + ".dtbo";
-		QString dtboPath = ZBNT_FIRMWARE_PATH "/" + dtboName;
+		QString dtboPath = ZBNT_FIRMWARE_PATH "/" + g_daemonCfg.deviceName + "/" + dtboName;
 
 		if(!QFile::exists(dtboPath))
 		{
@@ -121,7 +122,7 @@ bool loadBitstream(const QString &bitstreamName)
 
 	// Read dtbo file
 
-	QString dtboPath = ZBNT_FIRMWARE_PATH "/" + bitstreamName + ".dtbo";
+	QString dtboPath = ZBNT_FIRMWARE_PATH "/" + g_daemonCfg.deviceName + "/" + bitstreamName + ".dtbo";
 	QFile dtboFile(dtboPath);
 
 	if(!dtboFile.open(QIODevice::ReadOnly))

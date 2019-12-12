@@ -133,8 +133,8 @@ void DiscoveryServer::onReadyRead()
 				discoveryResponse.append(16, '\0');
 			}
 
-			appendAsBytes<quint16>(&discoveryResponse, daemonCfg.mainPort);
-			appendAsBytes<quint16>(&discoveryResponse, daemonCfg.streamPort);
+			appendAsBytes<quint16>(&discoveryResponse, g_daemonCfg.mainPort);
+			appendAsBytes<quint16>(&discoveryResponse, g_daemonCfg.streamPort);
 
 			discoveryResponse.append(host);
 

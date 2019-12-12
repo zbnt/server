@@ -25,7 +25,8 @@
 #include <WorkerThread.hpp>
 #include <BitstreamManager.hpp>
 
-MeasurementServer::MeasurementServer(QObject *parent) : QObject(parent)
+MeasurementServer::MeasurementServer(QObject *parent)
+	: QObject(parent)
 {
 	m_timer = new QTimer(this);
 	m_timer->setInterval(100);
@@ -35,13 +36,13 @@ MeasurementServer::MeasurementServer(QObject *parent) : QObject(parent)
 	m_server = new QTcpServer(this);
 	m_streamServer = new QTcpServer(this);
 
-	if(!m_server->listen(QHostAddress::Any, daemonCfg.mainPort))
-		qFatal("[net] Can't listen on TCP port %d", daemonCfg.mainPort);
+	if(!m_server->listen(QHostAddress::Any, g_daemonCfg.mainPort))
+		qFatal("[net] F: Can't listen on TCP port %d", g_daemonCfg.mainPort);
 
-	if(!m_streamServer->listen(QHostAddress::Any, daemonCfg.streamPort))
-		qFatal("[net] Can't listen on TCP port %d", daemonCfg.streamPort);
+	if(!m_streamServer->listen(QHostAddress::Any, g_daemonCfg.streamPort))
+		qFatal("[net] F: Can't listen on TCP port %d", g_daemonCfg.streamPort);
 
-	qInfo("[net] Listening on TCP ports %d and %d", daemonCfg.mainPort, daemonCfg.streamPort);
+	qInfo("[net] I: Listening on TCP ports %d and %d", g_daemonCfg.mainPort, g_daemonCfg.streamPort);
 
 	connect(m_timer, &QTimer::timeout, this, &MeasurementServer::sendMeasurements);
 	connect(m_server, &QTcpServer::newConnection, this, &MeasurementServer::onIncomingConnection);
@@ -279,7 +280,7 @@ void MeasurementServer::onIncomingConnection()
 		m_client = connection;
 		m_client->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
 
-		qInfo("[net] Incoming connection: %s", qUtf8Printable(m_client->peerAddress().toString()));
+		qInfo("[net] I: Incoming connection: %s", qUtf8Printable(m_client->peerAddress().toString()));
 
 		connect(m_client, &QTcpSocket::readyRead, this, &MeasurementServer::onReadyRead);
 		connect(m_client, &QTcpSocket::stateChanged, this, &MeasurementServer::onNetworkStateChanged);
@@ -300,7 +301,7 @@ void MeasurementServer::onIncomingStreamConnection()
 		m_streamClient = connection;
 		m_streamReadBuffer.clear();
 
-		qInfo("[net] Incoming stream connection: %s", qUtf8Printable(m_client->peerAddress().toString()));
+		qInfo("[net] I: Incoming stream connection: %s", qUtf8Printable(m_client->peerAddress().toString()));
 
 		connect(m_streamClient, &QTcpSocket::readyRead, this, &MeasurementServer::onStreamReadyRead);
 		connect(m_streamClient, &QTcpSocket::stateChanged, this, &MeasurementServer::onStreamNetworkStateChanged);
@@ -321,7 +322,7 @@ void MeasurementServer::onNetworkStateChanged(QAbstractSocket::SocketState state
 {
 	if(state == QAbstractSocket::UnconnectedState)
 	{
-		qInfo("[net] Stream client disconnected");
+		qInfo("[net] I: Stream client disconnected");
 
 		m_client->deleteLater();
 		m_client = nullptr;
@@ -373,7 +374,7 @@ void MeasurementServer::onStreamNetworkStateChanged(QAbstractSocket::SocketState
 {
 	if(state == QAbstractSocket::UnconnectedState)
 	{
-		qInfo("[net] Client disconnected");
+		qInfo("[net] I: Client disconnected");
 
 		m_streamClient->deleteLater();
 		m_streamClient = nullptr;

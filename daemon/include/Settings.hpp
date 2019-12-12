@@ -31,12 +31,14 @@ enum DaemonModes
 
 struct DaemonConfig
 {
+	QString deviceName;
+
 	DaemonModes mode;
 
 	quint16 mainPort;
 	quint16 streamPort;
 };
 
-extern DaemonConfig daemonCfg;
+extern DaemonConfig g_daemonCfg;
 
 extern void loadSettings(const char *path, const char *profile);

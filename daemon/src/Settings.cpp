@@ -23,22 +23,22 @@
 #include <QVariant>
 #include <QSettings>
 
-DaemonConfig daemonCfg;
+DaemonConfig g_daemonCfg;
 
 void loadSettings(const char *path, const char *profile)
 {
+	if(!QFile::exists(path))
+		qFatal("[cfg] F: Configuration file does not exist.");
+
 	QSettings cfg(path, QSettings::IniFormat);
 	cfg.beginGroup(profile);
 
 	qInfo("[cfg] I: Loading %s", path);
 	qInfo("[cfg] I: Active profile: %s", profile);
 
-	if(!QFile::exists(path))
-		qFatal("[cfg] F: Configuration file does not exist");
-
 	// Check for required keys
 
-	for(auto k : {"mode", "mem_dev", "mem_base"})
+	for(auto k : {"mode"})
 	{
 		if(!cfg.contains(k))
 			qFatal("[cfg] F: Missing configuration key: %s", k);
@@ -49,14 +49,16 @@ void loadSettings(const char *path, const char *profile)
 	QString mode = cfg.value("mode").toString().toLower();
 
 	if(mode != "pcie" && mode != "axi")
-		qFatal("[cfg] F: Invalid value for type, valid values: axi, pcie");
+	{
+		qFatal("[cfg] F: Invalid value for type, valid values: AXI, PCIe");
+	}
 
-	daemonCfg.mode = (mode == "axi") ? MODE_AXI : MODE_PCIE;
+	g_daemonCfg.mode = (mode == "axi") ? MODE_AXI : MODE_PCIE;
 
 	//
 
 	bool ok = false;
-	daemonCfg.mainPort = 5464;
+	g_daemonCfg.mainPort = 5464;
 
 	if(cfg.contains("main_port"))
 	{
@@ -64,17 +66,17 @@ void loadSettings(const char *path, const char *profile)
 
 		if(ok)
 		{
-			daemonCfg.mainPort = mainPort;
+			g_daemonCfg.mainPort = mainPort;
 		}
 		else
 		{
-			qWarning("[cfg] W: Invalid value for main_port, using default value: 5464");
+			qWarning("[cfg] W: Invalid value for main_port, using default value.");
 		}
 	}
 
 	//
 
-	daemonCfg.streamPort = 5465;
+	g_daemonCfg.streamPort = 5465;
 
 	if(cfg.contains("stream_port"))
 	{
@@ -82,11 +84,15 @@ void loadSettings(const char *path, const char *profile)
 
 		if(ok)
 		{
-			daemonCfg.streamPort = streamPort;
+			g_daemonCfg.streamPort = streamPort;
 		}
 		else
 		{
-			qWarning("[cfg] W: Invalid value for stream_port, using default value: 5465");
+			qWarning("[cfg] W: Invalid value for stream_port, using default value.");
 		}
 	}
+
+	//
+
+	g_daemonCfg.deviceName = profile;
 }

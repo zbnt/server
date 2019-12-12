@@ -38,11 +38,7 @@ int main(int argc, char **argv)
 
 	// Load config
 
-	if(argc <= 1)
-	{
-		loadSettings(ZBNT_CFG_PATH "/daemon.cfg", "default");
-	}
-	else if(argc == 2)
+	if(argc == 2)
 	{
 		loadSettings(ZBNT_CFG_PATH "/daemon.cfg", argv[1]);
 	}
@@ -56,7 +52,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	qInfo("[mem] I: Running in %s mode", daemonCfg.mode == MODE_AXI ? "AXI" : "PCIe");
+	qInfo("[mem] I: Running in %s mode", g_daemonCfg.mode == MODE_AXI ? "AXI" : "PCIe");
 
 	// Program PL
 
