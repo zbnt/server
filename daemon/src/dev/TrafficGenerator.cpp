@@ -39,14 +39,19 @@ TrafficGenerator::~TrafficGenerator()
 	}
 }
 
-DeviceType TrafficGenerator::getType()
+DeviceType TrafficGenerator::getType() const
 {
 	return DEV_TRAFFIC_GENERATOR;
 }
 
-uint32_t TrafficGenerator::getIdentifier()
+uint32_t TrafficGenerator::getIdentifier() const
 {
 	return m_port;
+}
+
+bool TrafficGenerator::isReady() const
+{
+	return !!m_regs;
 }
 
 bool TrafficGenerator::loadDevice(const void *fdt, int offset)

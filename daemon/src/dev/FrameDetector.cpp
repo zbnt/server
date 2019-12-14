@@ -39,14 +39,19 @@ FrameDetector::~FrameDetector()
 	}
 }
 
-DeviceType FrameDetector::getType()
+DeviceType FrameDetector::getType() const
 {
 	return DEV_FRAME_DETECTOR;
 }
 
-uint32_t FrameDetector::getIdentifier()
+uint32_t FrameDetector::getIdentifier() const
 {
 	return m_portA | (m_portB << 8);
+}
+
+bool FrameDetector::isReady() const
+{
+	return !!m_regs;
 }
 
 bool FrameDetector::loadDevice(const void *fdt, int offset)

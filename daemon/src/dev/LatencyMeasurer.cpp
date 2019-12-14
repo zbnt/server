@@ -39,14 +39,19 @@ LatencyMeasurer::~LatencyMeasurer()
 	}
 }
 
-DeviceType LatencyMeasurer::getType()
+DeviceType LatencyMeasurer::getType() const
 {
 	return DEV_LATENCY_MEASURER;
 }
 
-uint32_t LatencyMeasurer::getIdentifier()
+uint32_t LatencyMeasurer::getIdentifier() const
 {
 	return m_portA | (m_portB << 8);
+}
+
+bool LatencyMeasurer::isReady() const
+{
+	return !!m_regs;
 }
 
 bool LatencyMeasurer::loadDevice(const void *fdt, int offset)

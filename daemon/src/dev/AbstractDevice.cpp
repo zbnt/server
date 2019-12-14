@@ -24,3 +24,8 @@ AbstractDevice::AbstractDevice(const QByteArray &name)
 
 AbstractDevice::~AbstractDevice()
 { }
+
+const QByteArray &AbstractDevice::getName() const
+{
+	return m_name;
+}

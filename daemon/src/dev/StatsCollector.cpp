@@ -39,14 +39,19 @@ StatsCollector::~StatsCollector()
 	}
 }
 
-DeviceType StatsCollector::getType()
+DeviceType StatsCollector::getType() const
 {
 	return DEV_STATS_COLLECTOR;
 }
 
-uint32_t StatsCollector::getIdentifier()
+uint32_t StatsCollector::getIdentifier() const
 {
 	return m_port;
+}
+
+bool StatsCollector::isReady() const
+{
+	return !!m_regs;
 }
 
 bool StatsCollector::loadDevice(const void *fdt, int offset)
@@ -104,14 +109,28 @@ bool StatsCollector::loadDevice(const void *fdt, int offset)
 
 void StatsCollector::setReset(bool reset)
 {
+	if(!m_regs) return;
+
+	if(reset)
+	{
+		m_regs->config = CFG_RESET;
+	}
+	else
+	{
+		m_regs->config = 0;
+	}
 }
 
 bool StatsCollector::setProperty(const QByteArray &key, const QByteArray &value)
 {
+	if(!m_regs) return false;
+
 	return true;
 }
 
 bool StatsCollector::getProperty(const QByteArray &key, QByteArray &value)
 {
+	if(!m_regs) return false;
+
 	return true;
 }

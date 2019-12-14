@@ -28,9 +28,12 @@ public:
 	DmaBuffer(const QByteArray &name);
 	~DmaBuffer();
 
-	DeviceType getType();
-	uint32_t getIdentifier();
+	DeviceType getType() const;
+	uint32_t getIdentifier() const;
+	uint64_t getPhysAddr() const;
+	size_t getMemSize() const;
 
+	bool isReady() const;
 	bool loadDevice(const void *fdt, int offset);
 
 	void setReset(bool reset);
@@ -39,6 +42,7 @@ public:
 
 private:
 	uint8_t *m_ptr;
+	uint64_t m_physAddr;
 	size_t m_memSize;
 };
 

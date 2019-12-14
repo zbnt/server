@@ -39,14 +39,19 @@ SimpleTimer::~SimpleTimer()
 	}
 }
 
-DeviceType SimpleTimer::getType()
+DeviceType SimpleTimer::getType() const
 {
 	return DEV_SIMPLE_TIMER;
 }
 
-uint32_t SimpleTimer::getIdentifier()
+uint32_t SimpleTimer::getIdentifier() const
 {
 	return 0x80000000;
+}
+
+bool SimpleTimer::isReady() const
+{
+	return !!m_regs;
 }
 
 bool SimpleTimer::loadDevice(const void *fdt, int offset)

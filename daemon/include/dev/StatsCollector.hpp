@@ -25,6 +25,10 @@
 class StatsCollector : public AbstractDevice
 {
 public:
+	static constexpr uint32_t CFG_ENABLE = 1;
+	static constexpr uint32_t CFG_RESET = 2;
+	static constexpr uint32_t CFG_HOLD = 3;
+
 	struct Registers
 	{
 		uint32_t config;
@@ -44,9 +48,10 @@ public:
 	StatsCollector(const QByteArray &name);
 	~StatsCollector();
 
-	DeviceType getType();
-	uint32_t getIdentifier();
+	DeviceType getType() const;
+	uint32_t getIdentifier() const;
 
+	bool isReady() const;
 	bool loadDevice(const void *fdt, int offset);
 
 	void setReset(bool reset);

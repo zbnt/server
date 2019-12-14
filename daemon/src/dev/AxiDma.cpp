@@ -27,8 +27,10 @@
 #include <Utils.hpp>
 #include <BitstreamManager.hpp>
 
+#include <dev/DmaBuffer.hpp>
+
 AxiDma::AxiDma(const QByteArray &name)
-	: AbstractDevice(name), m_regs(nullptr), m_regsSize(0)
+	: AbstractDevice(name), m_regs(nullptr), m_regsSize(0), m_fd(-1)
 { }
 
 AxiDma::~AxiDma()
@@ -37,16 +39,26 @@ AxiDma::~AxiDma()
 	{
 		munmap((void*) m_regs, m_regsSize);
 	}
+
+	if(m_fd != -1)
+	{
+		close(m_fd);
+	}
 }
 
-DeviceType AxiDma::getType()
+DeviceType AxiDma::getType() const
 {
 	return DEV_AXI_DMA;
 }
 
-uint32_t AxiDma::getIdentifier()
+uint32_t AxiDma::getIdentifier() const
 {
 	return 0x80000000;
+}
+
+bool AxiDma::isReady() const
+{
+	return m_regs && m_regs->s2mm_da;
 }
 
 bool AxiDma::loadDevice(const void *fdt, int offset)
@@ -76,15 +88,15 @@ bool AxiDma::loadDevice(const void *fdt, int offset)
 	// Open memory map
 
 	QByteArray uioDevice = "/dev/" + *it;
-	int fd = open(uioDevice.constData(), O_RDWR | O_SYNC);
+	m_fd = open(uioDevice.constData(), O_RDWR | O_SYNC);
 
-	if(fd == -1)
+	if(m_fd == -1)
 	{
 		qCritical("[dev] E: Failed to open %s", uioDevice.constData());
 		return false;
 	}
 
-	m_regs = (volatile Registers*) mmap(NULL, m_regsSize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	m_regs = (volatile Registers*) mmap(NULL, m_regsSize, PROT_READ | PROT_WRITE, MAP_SHARED, m_fd, 0);
 
 	if(!m_regs)
 	{
@@ -92,12 +104,40 @@ bool AxiDma::loadDevice(const void *fdt, int offset)
 		return false;
 	}
 
-	close(fd);
+	// Link to a buffer
+
+	if(!g_dmaBuffer->isReady())
+	{
+		qCritical("[dev] E: No valid DMA buffer was found for %s", m_name.constData());
+		return false;
+	}
+
+	startTransfer();
 	return true;
+}
+
+uint32_t AxiDma::waitForInterrupt()
+{
+	uint32_t res = 0;
+	read(m_fd, &res, sizeof(uint32_t));
+	return res;
+}
+
+void AxiDma::clearInterrupts()
+{
+	m_regs->s2mm_dmasr |= 0x7000;
+}
+
+void AxiDma::startTransfer()
+{
+	m_regs->s2mm_dmacr |= 1 | (1 << 12);
+	m_regs->s2mm_da = g_dmaBuffer->getPhysAddr();
+	m_regs->s2mm_length = g_dmaBuffer->getMemSize();
 }
 
 void AxiDma::setReset(bool reset)
 {
+	Q_UNUSED(reset);
 }
 
 bool AxiDma::setProperty(const QByteArray &key, const QByteArray &value)

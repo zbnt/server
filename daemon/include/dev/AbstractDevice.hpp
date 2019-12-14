@@ -37,9 +37,11 @@ public:
 	AbstractDevice(const QByteArray &name);
 	virtual ~AbstractDevice();
 
-	virtual DeviceType getType() = 0;
-	virtual uint32_t getIdentifier() = 0;
+	const QByteArray &getName() const;
+	virtual DeviceType getType() const = 0;
+	virtual uint32_t getIdentifier() const = 0;
 
+	virtual bool isReady() const = 0;
 	virtual bool loadDevice(const void *fdt, int offset) = 0;
 
 	virtual void setReset(bool reset) = 0;

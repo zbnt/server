@@ -27,18 +27,35 @@ class AxiDma : public AbstractDevice
 public:
 	struct Registers
 	{
-		// TODO
-		uint32_t _unknown;
+		uint32_t mm2s_dmacr;     // +0
+		uint32_t mm2s_dmasr;     // +4
+		uint32_t __reserved1[4]; // +8
+		uint64_t mm2s_sa;        // +24
+		uint32_t __reserved2[2];
+		uint32_t mm2s_length;    // +40
+		uint32_t __reserved3;
+
+		uint32_t s2mm_dmacr;     // +48
+		uint32_t s2mm_dmasr;     // +52
+		uint32_t __reserved4[4];
+		uint64_t s2mm_da;        // +72
+		uint32_t __reserved5[2];
+		uint32_t s2mm_length;    // +88
 	};
 
 public:
 	AxiDma(const QByteArray &name);
 	~AxiDma();
 
-	DeviceType getType();
-	uint32_t getIdentifier();
+	DeviceType getType() const;
+	uint32_t getIdentifier() const;
 
+	bool isReady() const;
 	bool loadDevice(const void *fdt, int offset);
+
+	uint32_t waitForInterrupt();
+	void clearInterrupts();
+	void startTransfer();
 
 	void setReset(bool reset);
 	bool setProperty(const QByteArray &key, const QByteArray &value);
@@ -47,4 +64,5 @@ public:
 private:
 	volatile Registers *m_regs;
 	size_t m_regsSize;
+	int m_fd;
 };

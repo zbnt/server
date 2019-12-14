@@ -51,9 +51,10 @@ public:
 	FrameDetector(const QByteArray &name);
 	~FrameDetector();
 
-	DeviceType getType();
-	uint32_t getIdentifier();
+	DeviceType getType() const;
+	uint32_t getIdentifier() const;
 
+	bool isReady() const;
 	bool loadDevice(const void *fdt, int offset);
 
 	void setReset(bool reset);
