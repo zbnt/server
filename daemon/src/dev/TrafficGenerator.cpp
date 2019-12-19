@@ -27,8 +27,8 @@
 #include <Utils.hpp>
 #include <BitstreamManager.hpp>
 
-TrafficGenerator::TrafficGenerator(const QByteArray &name)
-	: AbstractDevice(name), m_regs(nullptr), m_regsSize(0), m_port(0)
+TrafficGenerator::TrafficGenerator(const QByteArray &name, uint32_t index)
+	: AbstractDevice(name, index), m_regs(nullptr), m_regsSize(0), m_port(0)
 { }
 
 TrafficGenerator::~TrafficGenerator()
@@ -44,7 +44,7 @@ DeviceType TrafficGenerator::getType() const
 	return DEV_TRAFFIC_GENERATOR;
 }
 
-uint32_t TrafficGenerator::getIdentifier() const
+uint64_t TrafficGenerator::getPorts() const
 {
 	return m_port;
 }
@@ -109,14 +109,205 @@ bool TrafficGenerator::loadDevice(const void *fdt, int offset)
 
 void TrafficGenerator::setReset(bool reset)
 {
+	if(!isReady()) return;
+
+	if(reset)
+	{
+		m_regs->config = CFG_RESET;
+	}
+	else
+	{
+		m_regs->config = 0;
+	}
 }
 
-bool TrafficGenerator::setProperty(const QByteArray &key, const QByteArray &value)
+bool TrafficGenerator::setProperty(PropertyID propID, const QByteArray &value)
 {
+	if(!isReady()) return false;
+
+	switch(propID)
+	{
+		case PROP_ENABLE:
+		{
+			if(value.length() < 1) return false;
+
+			m_regs->config = (m_regs->config & ~CFG_ENABLE) | (readAsNumber<uint8_t>(value, 0) & CFG_ENABLE);
+			break;
+		}
+
+		case PROP_ENABLE_BURST:
+		{
+			if(value.length() < 1) return false;
+
+			if(readAsNumber<uint8_t>(value, 0))
+			{
+				m_regs->config |= CFG_BURST;
+			}
+			else
+			{
+				m_regs->config &= ~CFG_BURST;
+			}
+
+			break;
+		}
+
+		case PROP_FRAME_SIZE:
+		{
+			if(value.length() < 2) return false;
+
+			m_regs->fsize = readAsNumber<uint16_t>(value, 0);
+			break;
+		}
+
+		case PROP_FRAME_GAP:
+		{
+			if(value.length() < 4) return false;
+
+			m_regs->fdelay = readAsNumber<uint32_t>(value, 0);
+			break;
+		}
+
+		case PROP_BURST_TIME_ON:
+		{
+			if(value.length() < 2) return false;
+
+			m_regs->burst_time_on = readAsNumber<uint16_t>(value, 0);
+			break;
+		}
+
+		case PROP_BURST_TIME_OFF:
+		{
+			if(value.length() < 2) return false;
+
+			m_regs->burst_time_off = readAsNumber<uint16_t>(value, 0);
+			break;
+		}
+
+		case PROP_LFSR_SEED:
+		{
+			if(value.length() < 1) return false;
+
+			m_regs->lfsr_seed_val = readAsNumber<uint8_t>(value, 0);
+			m_regs->config |= CFG_SEED_REQ;
+			break;
+		}
+
+		case PROP_FRAME_TEMPLATE:
+		{
+			uint8_t *ptr = makePointer<uint8_t>(m_regs, TGEN_MEM_FRAME_OFFSET);
+
+			for(int i = 0; i < TGEN_MEM_SIZE; ++i)
+			{
+				if(i < value.length())
+				{
+					ptr[i] = value[i];
+				}
+				else
+				{
+					ptr[i] = 0;
+				}
+			}
+
+			break;
+		}
+
+		case PROP_FRAME_PATTERN:
+		{
+			uint8_t *ptr = makePointer<uint8_t>(m_regs, TGEN_MEM_PATTERN_OFFSET);
+
+			for(int i = 0; i < TGEN_MEM_SIZE/8; ++i)
+			{
+				if(i < value.length())
+				{
+					ptr[i] = value[i];
+				}
+				else
+				{
+					ptr[i] = 0xFF;
+				}
+			}
+
+			break;
+		}
+
+		default:
+		{
+			return false;
+		}
+	}
+
 	return true;
 }
 
-bool TrafficGenerator::getProperty(const QByteArray &key, QByteArray &value)
+bool TrafficGenerator::getProperty(PropertyID propID, QByteArray &value)
 {
+	if(!isReady()) return false;
+
+	switch(propID)
+	{
+		case PROP_ENABLE:
+		{
+			appendAsBytes<uint8_t>(value, m_regs->config & CFG_ENABLE);
+			break;
+		}
+
+		case PROP_ENABLE_BURST:
+		{
+			appendAsBytes<uint8_t>(value, !!(m_regs->config & CFG_BURST));
+			break;
+		}
+
+		case PROP_FRAME_SIZE:
+		{
+			appendAsBytes<uint16_t>(value, m_regs->fsize);
+			break;
+		}
+
+		case PROP_FRAME_GAP:
+		{
+			appendAsBytes(value, m_regs->fdelay);
+			break;
+		}
+
+		case PROP_BURST_TIME_ON:
+		{
+			appendAsBytes(value, m_regs->burst_time_on);
+			break;
+		}
+
+		case PROP_BURST_TIME_OFF:
+		{
+			appendAsBytes(value, m_regs->burst_time_off);
+			break;
+		}
+
+		case PROP_LFSR_SEED:
+		{
+			appendAsBytes(value, m_regs->lfsr_seed_val);
+			break;
+		}
+
+		case PROP_FRAME_TEMPLATE:
+		{
+			char *ptr = makePointer<char>(m_regs, TGEN_MEM_FRAME_OFFSET);
+
+			value.append(ptr, TGEN_MEM_SIZE);
+			break;
+		}
+
+		case PROP_FRAME_PATTERN:
+		{
+			char *ptr = makePointer<char>(m_regs, TGEN_MEM_PATTERN_OFFSET);
+
+			value.append(ptr, TGEN_MEM_SIZE/8);
+			break;
+		}
+
+		default:
+		{
+			return false;
+		}
+	}
+
 	return true;
 }

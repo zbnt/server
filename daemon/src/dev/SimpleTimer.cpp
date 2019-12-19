@@ -28,7 +28,7 @@
 #include <BitstreamManager.hpp>
 
 SimpleTimer::SimpleTimer(const QByteArray &name)
-	: AbstractDevice(name), m_regs(nullptr), m_regsSize(0)
+	: AbstractDevice(name, 0x80000000), m_regs(nullptr), m_regsSize(0)
 { }
 
 SimpleTimer::~SimpleTimer()
@@ -44,11 +44,6 @@ DeviceType SimpleTimer::getType() const
 	return DEV_SIMPLE_TIMER;
 }
 
-uint32_t SimpleTimer::getIdentifier() const
-{
-	return 0x80000000;
-}
-
 bool SimpleTimer::isReady() const
 {
 	return !!m_regs;
@@ -56,7 +51,7 @@ bool SimpleTimer::isReady() const
 
 bool SimpleTimer::loadDevice(const void *fdt, int offset)
 {
-	if(!fdt || m_regs) return false;
+	if(isReady() || !fdt) return false;
 
 	quintptr base;
 
@@ -103,14 +98,96 @@ bool SimpleTimer::loadDevice(const void *fdt, int offset)
 
 void SimpleTimer::setReset(bool reset)
 {
+	if(!isReady()) return;
+
+	if(reset)
+	{
+		m_regs->config = CFG_RESET;
+	}
+	else
+	{
+		m_regs->config = 0;
+	}
 }
 
-bool SimpleTimer::setProperty(const QByteArray &key, const QByteArray &value)
+bool SimpleTimer::setProperty(PropertyID propID, const QByteArray &value)
 {
+	if(!isReady()) return false;
+
+	switch(propID)
+	{
+		case PROP_ENABLE:
+		{
+			if(value.length() < 1) return false;
+
+			m_regs->config = (m_regs->config & ~CFG_ENABLE) | (readAsNumber<uint8_t>(value, 0) & CFG_ENABLE);
+			break;
+		}
+
+		case PROP_TIMER_MODE:
+		{
+			// RESERVED
+			break;
+		}
+
+		case PROP_TIMER_TIME:
+		{
+			// read-only
+			break;
+		}
+
+		case PROP_TIMER_LIMIT:
+		{
+			if(value.length() < 8) return false;
+
+			m_regs->max_time = readAsNumber<uint64_t>(value, 0);
+			break;
+		}
+
+		default:
+		{
+			return false;
+		}
+	}
+
 	return true;
 }
 
-bool SimpleTimer::getProperty(const QByteArray &key, QByteArray &value)
+bool SimpleTimer::getProperty(PropertyID propID, QByteArray &value)
 {
+	if(!isReady()) return false;
+
+	switch(propID)
+	{
+		case PROP_ENABLE:
+		{
+			appendAsBytes<uint8_t>(value, m_regs->config & CFG_ENABLE);
+			break;
+		}
+
+		case PROP_TIMER_MODE:
+		{
+			// RESERVED
+			break;
+		}
+
+		case PROP_TIMER_TIME:
+		{
+			appendAsBytes(value, m_regs->current_time);
+			break;
+		}
+
+		case PROP_TIMER_LIMIT:
+		{
+			appendAsBytes(value, m_regs->max_time);
+			break;
+		}
+
+		default:
+		{
+			return false;
+		}
+	}
+
 	return true;
 }

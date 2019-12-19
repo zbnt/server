@@ -1,8 +1,10 @@
 cmake_minimum_required(VERSION 3.7)
-project(zbnt_sw)
+project(zbnt_sw VERSION "2.0.0")
 
 option(BUILD_GUI    "Build the reference GUI"           ON)
 option(BUILD_DAEMON "Build the daemon for Zynq devices" OFF)
+
+math(EXPR ZBNT_VERSION_INT "(${PROJECT_VERSION_MAJOR} << 24) | (${PROJECT_VERSION_MINOR} << 16) | ${PROJECT_VERSION_PATCH}")
 
 set(CFG_PATH      "/etc/zbnt"              CACHE PATH "Location of configuration files")
 set(FIRMWARE_PATH "/usr/lib/firmware/zbnt" CACHE PATH "Location of bitstream and device tree files")

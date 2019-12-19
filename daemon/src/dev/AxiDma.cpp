@@ -30,7 +30,7 @@
 #include <dev/DmaBuffer.hpp>
 
 AxiDma::AxiDma(const QByteArray &name)
-	: AbstractDevice(name), m_regs(nullptr), m_regsSize(0), m_fd(-1)
+	: AbstractDevice(name, 0x80000000), m_regs(nullptr), m_regsSize(0), m_fd(-1)
 { }
 
 AxiDma::~AxiDma()
@@ -49,11 +49,6 @@ AxiDma::~AxiDma()
 DeviceType AxiDma::getType() const
 {
 	return DEV_AXI_DMA;
-}
-
-uint32_t AxiDma::getIdentifier() const
-{
-	return 0x80000000;
 }
 
 bool AxiDma::isReady() const
@@ -140,13 +135,16 @@ void AxiDma::setReset(bool reset)
 	Q_UNUSED(reset);
 }
 
-bool AxiDma::setProperty(const QByteArray &key, const QByteArray &value)
+bool AxiDma::setProperty(PropertyID propID, const QByteArray &value)
 {
-	return true;
+	Q_UNUSED(propID);
+	Q_UNUSED(value);
+	return false;
 }
 
-bool AxiDma::getProperty(const QByteArray &key, QByteArray &value)
+bool AxiDma::getProperty(PropertyID propID, QByteArray &value)
 {
-	return true;
+	Q_UNUSED(propID);
+	Q_UNUSED(value);
+	return false;
 }
-

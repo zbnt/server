@@ -23,8 +23,8 @@
 #include <QMutexLocker>
 #include <QByteArray>
 
-extern QMutex workerMutex;
-extern QByteArray msgBuffer;
+extern QMutex g_workerMutex;
+extern QByteArray g_msgBuffer;
 
 extern uint8_t running;
 extern uint8_t streamMode;
@@ -33,6 +33,3 @@ extern double dataRate[4];
 extern uint64_t lastTxBytesCount[4], lastTxBytesTime[4];
 
 extern void workerThread();
-extern void resetPL();
-extern void buildMessage(uint8_t id, volatile uint32_t *data, uint32_t numWords);
-extern void buildMessage(uint8_t id, uint8_t idx, volatile uint32_t *data, uint32_t numWords);

@@ -40,10 +40,12 @@ int main(int argc, char **argv)
 
 	if(argc == 2)
 	{
+		qInfo("[zbnt] Running version " ZBNT_VERSION);
 		loadSettings(ZBNT_CFG_PATH "/daemon.cfg", argv[1]);
 	}
 	else if(argc == 3)
 	{
+		qInfo("[zbnt] Running version " ZBNT_VERSION);
 		loadSettings(argv[2], argv[1]);
 	}
 	else

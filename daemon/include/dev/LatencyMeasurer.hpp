@@ -25,36 +25,48 @@
 class LatencyMeasurer : public AbstractDevice
 {
 public:
+	static constexpr uint32_t CFG_ENABLE     = 1;
+	static constexpr uint32_t CFG_RESET      = 2;
+	static constexpr uint32_t CFG_HOLD       = 4;
+	static constexpr uint32_t CFG_LOG_ENABLE = 8;
+	static constexpr uint32_t CFG_BROADCAST  = 16;
+
 	struct Registers
 	{
-		uint32_t config;
+		uint16_t config;
+		uint16_t log_identifier;
+
+		uint8_t mac_addr_a[6];
+		uint8_t mac_addr_b[6];
+		uint32_t ip_addr_a;
+		uint32_t ip_addr_b;
+
 		uint32_t padding;
 		uint32_t delay;
 		uint32_t timeout;
-		uint32_t fifo_occupancy;
-		uint32_t fifo_pop;
+		uint32_t _reserved;
+		uint64_t overflow_count;
 
-		uint64_t time;
+		uint64_t ping_pong_good;
 		uint32_t ping_latency;
 		uint32_t pong_latency;
-		uint64_t ping_pong_good;
 		uint64_t pings_lost;
 		uint64_t pongs_lost;
 	};
 
 public:
-	LatencyMeasurer(const QByteArray &name);
+	LatencyMeasurer(const QByteArray &name, uint32_t index);
 	~LatencyMeasurer();
 
 	DeviceType getType() const;
-	uint32_t getIdentifier() const;
+	uint64_t getPorts() const;
 
 	bool isReady() const;
 	bool loadDevice(const void *fdt, int offset);
 
 	void setReset(bool reset);
-	bool setProperty(const QByteArray &key, const QByteArray &value);
-	bool getProperty(const QByteArray &key, QByteArray &value);
+	bool setProperty(PropertyID propID, const QByteArray &value);
+	bool getProperty(PropertyID propID, QByteArray &value);
 
 private:
 	volatile Registers *m_regs;

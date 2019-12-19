@@ -18,6 +18,9 @@
 
 #include <Utils.hpp>
 
+#include <Messages.hpp>
+#include <WorkerThread.hpp>
+
 void memcpy_v(volatile void *dst, volatile const void *src, uint32_t count)
 {
 	volatile uint8_t *dst8 = (volatile uint8_t*) dst;
@@ -27,6 +30,15 @@ void memcpy_v(volatile void *dst, volatile const void *src, uint32_t count)
 	{
 		*dst8++ = *src8++;
 	}
+}
+
+void buildMessage(uint8_t msgID, uint8_t devID, const QByteArray &params)
+{
+	g_msgBuffer.append(MSG_MAGIC_IDENTIFIER, 4);
+	appendAsBytes<quint8>(g_msgBuffer, msgID);
+	appendAsBytes<quint8>(g_msgBuffer, devID);
+	appendAsBytes<quint16>(g_msgBuffer, params.size());
+	g_msgBuffer.append(params);
 }
 
 bool fdtEnumerateDevices(const void *fdt, int offset, const std::function<bool(const QByteArray&, int)> &callback)

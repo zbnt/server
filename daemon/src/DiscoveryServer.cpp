@@ -110,14 +110,14 @@ void DiscoveryServer::onReadyRead()
 			if(ip4.isNull() && ip6.isNull()) continue;
 
 			discoveryResponse.append(MSG_MAGIC_IDENTIFIER, 4);
-			appendAsBytes<quint8>(&discoveryResponse, MSG_ID_DISCOVERY_RESP);
-			appendAsBytes<quint16>(&discoveryResponse, 4 + 8 + 4 + 16 + 4 + host.length());
-			appendAsBytes<quint32>(&discoveryResponse, MSG_VERSION);
+			appendAsBytes<quint8>(discoveryResponse, MSG_ID_DISCOVERY);
+			appendAsBytes<quint16>(discoveryResponse, 4 + 8 + 4 + 16 + 4 + host.length());
+			appendAsBytes<quint32>(discoveryResponse, ZBNT_VERSION_INT);
 			discoveryResponse.append(m_recvdTime);
 
 			if(!ip4.isNull())
 			{
-				appendAsBytes<quint32>(&discoveryResponse, ip4.toIPv4Address());
+				appendAsBytes<quint32>(discoveryResponse, ip4.toIPv4Address());
 			}
 			else
 			{
@@ -133,8 +133,8 @@ void DiscoveryServer::onReadyRead()
 				discoveryResponse.append(16, '\0');
 			}
 
-			appendAsBytes<quint16>(&discoveryResponse, g_daemonCfg.mainPort);
-			appendAsBytes<quint16>(&discoveryResponse, g_daemonCfg.streamPort);
+			appendAsBytes<quint16>(discoveryResponse, g_daemonCfg.mainPort);
+			appendAsBytes<quint16>(discoveryResponse, g_daemonCfg.streamPort);
 
 			discoveryResponse.append(host);
 

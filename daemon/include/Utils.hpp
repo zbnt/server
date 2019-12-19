@@ -28,16 +28,16 @@ extern "C"
 	#include <libfdt.h>
 };
 
-template<typename T>
-constexpr volatile T *makePointer(volatile void *base, uint32_t offset)
+template<typename T1, typename T2>
+constexpr T1 *makePointer(T2 *base, uint32_t offset)
 {
-	return (volatile T*) (uintptr_t(base) + offset);
+	return (T1*) (uintptr_t(base) + offset);
 }
 
 template<typename T>
-void appendAsBytes(QByteArray *array, T data)
+void appendAsBytes(QByteArray &array, T data)
 {
-	array->append((const char*) &data, sizeof(T));
+	array.append((const char*) &data, sizeof(T));
 }
 
 template<typename T>
@@ -54,6 +54,7 @@ T readAsNumber(const QByteArray &data, quint32 offset)
 }
 
 extern void memcpy_v(volatile void *dst, volatile const void *src, uint32_t count);
+extern void buildMessage(uint8_t msgID, uint8_t devID, const QByteArray &params);
 
 extern bool fdtEnumerateDevices(const void *fdt, int offset, const std::function<bool(const QByteArray&, int)> &callback);
 extern bool fdtGetStringProp(const void *fdt, int offset, const char *name, QByteArray &out);

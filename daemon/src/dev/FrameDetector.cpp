@@ -27,8 +27,8 @@
 #include <Utils.hpp>
 #include <BitstreamManager.hpp>
 
-FrameDetector::FrameDetector(const QByteArray &name)
-	: AbstractDevice(name), m_regs(nullptr), m_regsSize(0), m_portA(0), m_portB(0)
+FrameDetector::FrameDetector(const QByteArray &name, uint32_t index)
+	: AbstractDevice(name, index), m_regs(nullptr), m_regsSize(0), m_portA(0), m_portB(0)
 { }
 
 FrameDetector::~FrameDetector()
@@ -44,9 +44,9 @@ DeviceType FrameDetector::getType() const
 	return DEV_FRAME_DETECTOR;
 }
 
-uint32_t FrameDetector::getIdentifier() const
+uint64_t FrameDetector::getPorts() const
 {
-	return m_portA | (m_portB << 8);
+	return (m_portB << 8) | m_portA;
 }
 
 bool FrameDetector::isReady() const
@@ -103,20 +103,215 @@ bool FrameDetector::loadDevice(const void *fdt, int offset)
 		return false;
 	}
 
+	m_regs->log_identifier = m_idx | MSG_ID_MEASUREMENT;
+
 	close(fd);
 	return true;
 }
 
 void FrameDetector::setReset(bool reset)
 {
+	if(!isReady()) return;
+
+	if(reset)
+	{
+		m_regs->config = CFG_RESET;
+	}
+	else
+	{
+		m_regs->config = 0;
+	}
 }
 
-bool FrameDetector::setProperty(const QByteArray &key, const QByteArray &value)
+bool FrameDetector::setProperty(PropertyID propID, const QByteArray &value)
 {
+	if(!isReady()) return false;
+
+	switch(propID)
+	{
+		case PROP_ENABLE:
+		{
+			if(value.length() < 1) return false;
+
+			m_regs->config = (m_regs->config & ~CFG_ENABLE) | (readAsNumber<uint8_t>(value, 0) & CFG_ENABLE);
+			break;
+		}
+
+		case PROP_ENABLE_CSUM_FIX:
+		{
+			if(value.length() < 1) return false;
+
+			if(readAsNumber<uint8_t>(value, 0))
+			{
+				m_regs->config |= CFG_FIX_CSUM;
+			}
+			else
+			{
+				m_regs->config &= ~CFG_FIX_CSUM;
+			}
+
+			break;
+		}
+
+		case PROP_ENABLE_PATTERN:
+		{
+			if(value.length() < 4) return false;
+
+			m_regs->match_enable = readAsNumber<uint32_t>(value, 0);
+			break;
+		}
+
+		case PROP_OVERFLOW_COUNT:
+		{
+			// read-only
+			break;
+		}
+
+		case PROP_FRAME_PATTERN:
+		{
+			if(value.length() < 2) return false;
+
+			uint8_t dir = readAsNumber<uint8_t>(value, 0) & 1;
+			uint8_t idx = readAsNumber<uint8_t>(value, 1) & 3;
+
+			uint32_t mask = 1 << (16*dir + idx);
+			uint32_t enable = m_regs->match_enable;
+			uint8_t *ptr = makePointer<uint8_t>(m_regs, dir ? FD_PATTERN_B_DATA_OFFSET : FD_PATTERN_A_DATA_OFFSET);
+
+			m_regs->match_enable = enable & ~mask;
+
+			for(int i = idx, j = 2; i < FD_MEM_SIZE; i += 4, ++j)
+			{
+				if(j < value.length())
+				{
+					ptr[i] = value[j];
+				}
+				else
+				{
+					ptr[i] = 0;
+				}
+			}
+
+			m_regs->match_enable = enable;
+			break;
+		}
+
+		case PROP_FRAME_PATTERN_FLAGS:
+		{
+			if(value.length() < 2) return false;
+
+			uint8_t dir = readAsNumber<uint8_t>(value, 0) & 1;
+			uint8_t idx = readAsNumber<uint8_t>(value, 1) & 3;
+
+			uint32_t mask = 1 << (16*dir + idx);
+			uint32_t enable = m_regs->match_enable;
+			uint8_t *ptr = makePointer<uint8_t>(m_regs, dir ? FD_PATTERN_B_FLAGS_OFFSET : FD_PATTERN_A_FLAGS_OFFSET);
+
+			m_regs->match_enable = enable & ~mask;
+
+			for(int i = idx, j = 2; i < FD_MEM_SIZE; i += 4, ++j)
+			{
+				if(j < value.length())
+				{
+					ptr[i] = value[j];
+				}
+				else
+				{
+					ptr[i] = 0;
+				}
+			}
+
+			m_regs->match_enable = enable;
+			break;
+		}
+
+		default:
+		{
+			return false;
+		}
+	}
+
 	return true;
 }
 
-bool FrameDetector::getProperty(const QByteArray &key, QByteArray &value)
+bool FrameDetector::getProperty(PropertyID propID, QByteArray &value)
 {
+	if(!isReady()) return false;
+
+	switch(propID)
+	{
+		case PROP_ENABLE:
+		{
+			appendAsBytes<uint8_t>(value, m_regs->config & CFG_ENABLE);
+			break;
+		}
+
+		case PROP_ENABLE_CSUM_FIX:
+		{
+			appendAsBytes<uint8_t>(value, !!(m_regs->config & CFG_FIX_CSUM));
+			break;
+		}
+
+		case PROP_ENABLE_PATTERN:
+		{
+			appendAsBytes(value, m_regs->match_enable);
+			break;
+		}
+
+		case PROP_OVERFLOW_COUNT:
+		{
+			appendAsBytes(value, m_regs->overflow_count_a);
+			appendAsBytes(value, m_regs->overflow_count_b);
+			break;
+		}
+
+		case PROP_FRAME_PATTERN:
+		{
+			uint8_t *ptrA = makePointer<uint8_t>(m_regs, FD_PATTERN_A_DATA_OFFSET);
+			uint8_t *ptrB = makePointer<uint8_t>(m_regs, FD_PATTERN_B_DATA_OFFSET);
+
+			appendAsBytes<uint32_t>(value, FD_MEM_SIZE / FD_NUM_PATTERNS);
+
+			for(uint8_t *ptr : {ptrA, ptrB})
+			{
+				for(int idx = 0; idx < FD_NUM_PATTERNS; ++idx)
+				{
+					for(int j = idx; j < FD_MEM_SIZE; j += 4)
+					{
+						value.append(ptr[j]);
+					}
+				}
+			}
+
+			break;
+		}
+
+		case PROP_FRAME_PATTERN_FLAGS:
+		{
+			uint8_t *ptrA = makePointer<uint8_t>(m_regs, FD_PATTERN_A_FLAGS_OFFSET);
+			uint8_t *ptrB = makePointer<uint8_t>(m_regs, FD_PATTERN_B_FLAGS_OFFSET);
+
+			appendAsBytes<uint32_t>(value, FD_MEM_SIZE / FD_NUM_PATTERNS);
+
+			for(uint8_t *ptr : {ptrA, ptrB})
+			{
+				for(int idx = 0; idx < FD_NUM_PATTERNS; ++idx)
+				{
+					for(int j = idx; j < FD_MEM_SIZE; j += 4)
+					{
+						value.append(ptr[j]);
+					}
+				}
+			}
+
+			break;
+		}
+
+		default:
+		{
+			return false;
+		}
+	}
+
 	return true;
 }

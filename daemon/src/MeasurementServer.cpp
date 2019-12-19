@@ -54,39 +54,27 @@ MeasurementServer::~MeasurementServer()
 
 void MeasurementServer::sendMeasurements()
 {
-	if(!streamMode)
+	if(m_client)
 	{
-		if(m_client)
-		{
-			QMutexLocker lock(&workerMutex);
+		QMutexLocker lock(&g_workerMutex);
 
-			if(msgBuffer.length())
-			{
-				m_client->write(msgBuffer);
-				msgBuffer.clear();
-			}
+		if(g_msgBuffer.length())
+		{
+			m_client->write(g_msgBuffer);
+			g_msgBuffer.clear();
 		}
 	}
 	else
 	{
-		if(m_streamClient)
-		{
-			QMutexLocker lock(&workerMutex);
-			QByteArray streamData;
+		QMutexLocker lock(&g_workerMutex);
 
-			appendAsBytes<double>(&streamData, dataRate[0]);
-			appendAsBytes<double>(&streamData, dataRate[1]);
-			appendAsBytes<double>(&streamData, dataRate[2]);
-			appendAsBytes<double>(&streamData, dataRate[3]);
-
-			m_streamClient->write(streamData);
-		}
+		g_msgBuffer.clear();
 	}
 }
 
 void MeasurementServer::onMessageReceived(quint8 id, const QByteArray &data)
 {
-	QMutexLocker lock(&workerMutex);
+	QMutexLocker lock(&g_workerMutex);
 /*
 	switch(id)
 	{
@@ -294,7 +282,7 @@ void MeasurementServer::onIncomingConnection()
 
 void MeasurementServer::onIncomingStreamConnection()
 {
-	QTcpSocket *connection = m_streamServer->nextPendingConnection();
+	/*QTcpSocket *connection = m_streamServer->nextPendingConnection();
 
 	if(!m_streamClient && streamMode)
 	{
@@ -310,7 +298,7 @@ void MeasurementServer::onIncomingStreamConnection()
 	{
 		connection->abort();
 		connection->deleteLater();
-	}
+	}*/
 }
 
 void MeasurementServer::onReadyRead()
@@ -345,7 +333,7 @@ void MeasurementServer::onStreamReadyRead()
 
 	if(m_streamReadBuffer.length() >= 48)
 	{
-		QMutexLocker lock(&workerMutex);
+		QMutexLocker lock(&g_workerMutex);
 
 		/*tgen[0]->config = readAsNumber<uint8_t>(m_streamReadBuffer, 0);
 		tgen[1]->config = readAsNumber<uint8_t>(m_streamReadBuffer, 4);

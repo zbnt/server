@@ -190,7 +190,7 @@ bool loadBitstream(const QString &bitstreamName)
 			}
 			else if(name.startsWith("zbnt_fd@"))
 			{
-				FrameDetector *dev = new FrameDetector(name);
+				FrameDetector *dev = new FrameDetector(name, g_deviceList.size());
 
 				if(!dev || !dev->loadDevice(fdt, offset))
 				{
@@ -202,7 +202,7 @@ bool loadBitstream(const QString &bitstreamName)
 			}
 			else if(name.startsWith("zbnt_sc@"))
 			{
-				StatsCollector *dev = new StatsCollector(name);
+				StatsCollector *dev = new StatsCollector(name, g_deviceList.size());
 
 				if(!dev || !dev->loadDevice(fdt, offset))
 				{
@@ -214,7 +214,7 @@ bool loadBitstream(const QString &bitstreamName)
 			}
 			else if(name.startsWith("zbnt_lm@"))
 			{
-				LatencyMeasurer *dev = new LatencyMeasurer(name);
+				LatencyMeasurer *dev = new LatencyMeasurer(name, g_deviceList.size());
 
 				if(!dev || !dev->loadDevice(fdt, offset))
 				{
@@ -226,7 +226,7 @@ bool loadBitstream(const QString &bitstreamName)
 			}
 			else if(name.startsWith("zbnt_tg@"))
 			{
-				TrafficGenerator *dev = new TrafficGenerator(name);
+				TrafficGenerator *dev = new TrafficGenerator(name, g_deviceList.size());
 
 				if(!dev || !dev->loadDevice(fdt, offset))
 				{

@@ -27,8 +27,8 @@
 #include <Utils.hpp>
 #include <BitstreamManager.hpp>
 
-StatsCollector::StatsCollector(const QByteArray &name)
-	: AbstractDevice(name), m_regs(nullptr), m_regsSize(0), m_port(0)
+StatsCollector::StatsCollector(const QByteArray &name, uint32_t index)
+	: AbstractDevice(name, index), m_regs(nullptr), m_regsSize(0), m_port(0)
 { }
 
 StatsCollector::~StatsCollector()
@@ -44,7 +44,7 @@ DeviceType StatsCollector::getType() const
 	return DEV_STATS_COLLECTOR;
 }
 
-uint32_t StatsCollector::getIdentifier() const
+uint64_t StatsCollector::getPorts() const
 {
 	return m_port;
 }
@@ -56,7 +56,7 @@ bool StatsCollector::isReady() const
 
 bool StatsCollector::loadDevice(const void *fdt, int offset)
 {
-	if(!fdt || m_regs) return false;
+	if(isReady() || !fdt) return false;
 
 	quintptr base;
 
@@ -103,13 +103,15 @@ bool StatsCollector::loadDevice(const void *fdt, int offset)
 		return false;
 	}
 
+	m_regs->log_identifier = m_idx | MSG_ID_MEASUREMENT;
+
 	close(fd);
 	return true;
 }
 
 void StatsCollector::setReset(bool reset)
 {
-	if(!m_regs) return;
+	if(!isReady()) return;
 
 	if(reset)
 	{
@@ -121,16 +123,94 @@ void StatsCollector::setReset(bool reset)
 	}
 }
 
-bool StatsCollector::setProperty(const QByteArray &key, const QByteArray &value)
+bool StatsCollector::setProperty(PropertyID propID, const QByteArray &value)
 {
-	if(!m_regs) return false;
+	if(!isReady()) return false;
+
+	switch(propID)
+	{
+		case PROP_ENABLE:
+		{
+			if(value.length() < 1) return false;
+
+			m_regs->config = (m_regs->config & ~CFG_ENABLE) | (readAsNumber<uint8_t>(value, 0) & CFG_ENABLE);
+			break;
+		}
+
+		case PROP_ENABLE_LOG:
+		{
+			if(value.length() < 1) return false;
+
+			if(readAsNumber<uint8_t>(value, 0))
+			{
+				m_regs->config |= CFG_LOG_ENABLE;
+			}
+			else
+			{
+				m_regs->config &= ~CFG_LOG_ENABLE;
+			}
+
+			break;
+		}
+
+		case PROP_SAMPLE_PERIOD:
+		{
+			if(value.length() < 4) return false;
+
+			m_regs->sample_period = readAsNumber<uint32_t>(value, 0);
+			break;
+		}
+
+		case PROP_OVERFLOW_COUNT:
+		{
+			// read-only
+			break;
+		}
+
+		default:
+		{
+			return false;
+		}
+	}
 
 	return true;
 }
 
-bool StatsCollector::getProperty(const QByteArray &key, QByteArray &value)
+bool StatsCollector::getProperty(PropertyID propID, QByteArray &value)
 {
-	if(!m_regs) return false;
+	if(!isReady()) return false;
+
+	switch(propID)
+	{
+		case PROP_ENABLE:
+		{
+			appendAsBytes<uint8_t>(value, m_regs->config & CFG_ENABLE);
+			break;
+		}
+
+		case PROP_ENABLE_LOG:
+		{
+			appendAsBytes<uint8_t>(value, !!(m_regs->config & CFG_LOG_ENABLE));
+			break;
+		}
+
+		case PROP_SAMPLE_PERIOD:
+		{
+			appendAsBytes(value, m_regs->sample_period);
+			break;
+		}
+
+		case PROP_OVERFLOW_COUNT:
+		{
+			appendAsBytes(value, m_regs->overflow_count);
+			break;
+		}
+
+		default:
+		{
+			return false;
+		}
+	}
 
 	return true;
 }

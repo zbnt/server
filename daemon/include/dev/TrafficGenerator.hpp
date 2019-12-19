@@ -24,10 +24,16 @@
 
 #define TGEN_MEM_FRAME_OFFSET   0x0800
 #define TGEN_MEM_PATTERN_OFFSET 0x1000
+#define TGEN_MEM_SIZE           2048
 
 class TrafficGenerator : public AbstractDevice
 {
 public:
+	static constexpr uint32_t CFG_ENABLE   = 1;
+	static constexpr uint32_t CFG_RESET    = 2;
+	static constexpr uint32_t CFG_BURST    = 4;
+	static constexpr uint32_t CFG_SEED_REQ = 8;
+
 	struct Registers
 	{
 		uint32_t config;
@@ -40,18 +46,18 @@ public:
 	};
 
 public:
-	TrafficGenerator(const QByteArray &name);
+	TrafficGenerator(const QByteArray &name, uint32_t index);
 	~TrafficGenerator();
 
 	DeviceType getType() const;
-	uint32_t getIdentifier() const;
+	uint64_t getPorts() const;
 
 	bool isReady() const;
 	bool loadDevice(const void *fdt, int offset);
 
 	void setReset(bool reset);
-	bool setProperty(const QByteArray &key, const QByteArray &value);
-	bool getProperty(const QByteArray &key, QByteArray &value);
+	bool setProperty(PropertyID propID, const QByteArray &value);
+	bool getProperty(PropertyID propID, QByteArray &value);
 
 private:
 	volatile Registers *m_regs;

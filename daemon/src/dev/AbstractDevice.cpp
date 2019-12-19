@@ -18,8 +18,8 @@
 
 #include <dev/AbstractDevice.hpp>
 
-AbstractDevice::AbstractDevice(const QByteArray &name)
-	: m_name(name)
+AbstractDevice::AbstractDevice(const QByteArray &name, uint32_t index)
+	: m_name(name), m_idx(index)
 { }
 
 AbstractDevice::~AbstractDevice()
@@ -28,4 +28,14 @@ AbstractDevice::~AbstractDevice()
 const QByteArray &AbstractDevice::getName() const
 {
 	return m_name;
+}
+
+uint32_t AbstractDevice::getIndex() const
+{
+	return m_idx;
+}
+
+uint64_t AbstractDevice::getPorts() const
+{
+	return 0;
 }

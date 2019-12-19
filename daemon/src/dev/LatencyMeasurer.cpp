@@ -27,8 +27,8 @@
 #include <Utils.hpp>
 #include <BitstreamManager.hpp>
 
-LatencyMeasurer::LatencyMeasurer(const QByteArray &name)
-	: AbstractDevice(name), m_regs(nullptr), m_regsSize(0), m_portA(0), m_portB(0)
+LatencyMeasurer::LatencyMeasurer(const QByteArray &name, uint32_t index)
+	: AbstractDevice(name, index), m_regs(nullptr), m_regsSize(0), m_portA(0), m_portB(0)
 { }
 
 LatencyMeasurer::~LatencyMeasurer()
@@ -44,9 +44,9 @@ DeviceType LatencyMeasurer::getType() const
 	return DEV_LATENCY_MEASURER;
 }
 
-uint32_t LatencyMeasurer::getIdentifier() const
+uint64_t LatencyMeasurer::getPorts() const
 {
-	return m_portA | (m_portB << 8);
+	return (m_portB << 8) | m_portA;
 }
 
 bool LatencyMeasurer::isReady() const
@@ -109,14 +109,207 @@ bool LatencyMeasurer::loadDevice(const void *fdt, int offset)
 
 void LatencyMeasurer::setReset(bool reset)
 {
+	if(!isReady()) return;
+
+	if(reset)
+	{
+		m_regs->config = CFG_RESET;
+	}
+	else
+	{
+		m_regs->config = 0;
+	}
 }
 
-bool LatencyMeasurer::setProperty(const QByteArray &key, const QByteArray &value)
+bool LatencyMeasurer::setProperty(PropertyID propID, const QByteArray &value)
 {
+	if(!isReady()) return false;
+
+	switch(propID)
+	{
+		case PROP_ENABLE:
+		{
+			if(value.length() < 1) return false;
+
+			m_regs->config = (m_regs->config & ~CFG_ENABLE) | (readAsNumber<uint8_t>(value, 0) & CFG_ENABLE);
+			break;
+		}
+
+		case PROP_ENABLE_LOG:
+		{
+			if(value.length() < 1) return false;
+
+			if(readAsNumber<uint8_t>(value, 0))
+			{
+				m_regs->config |= CFG_LOG_ENABLE;
+			}
+			else
+			{
+				m_regs->config &= ~CFG_LOG_ENABLE;
+			}
+
+			break;
+		}
+
+		case PROP_ENABLE_BROADCAST:
+		{
+			if(value.length() < 1) return false;
+
+			if(readAsNumber<uint8_t>(value, 0))
+			{
+				m_regs->config |= CFG_BROADCAST;
+			}
+			else
+			{
+				m_regs->config &= ~CFG_BROADCAST;
+			}
+
+			break;
+		}
+
+		case PROP_MAC_ADDR:
+		{
+			if(value.length() < 7) return false;
+
+			uint8_t idx = value[0] & 1;
+			uint16_t cfg = m_regs->config;
+			volatile uint8_t *ptr = idx ? m_regs->mac_addr_b : m_regs->mac_addr_a;
+
+			m_regs->config = cfg & ~CFG_ENABLE;
+
+			for(int i = 0, j = 1; i < 6; ++i, ++j)
+			{
+				ptr[i] = value[j];
+			}
+
+			m_regs->config = cfg;
+			break;
+		}
+
+		case PROP_IP_ADDR:
+		{
+			if(value.length() < 5) return false;
+
+			uint8_t idx = value[0] & 1;
+
+			if(!idx)
+			{
+				m_regs->ip_addr_a = readAsNumber<uint32_t>(value, 1);
+			}
+			else
+			{
+				m_regs->ip_addr_b = readAsNumber<uint32_t>(value, 1);
+			}
+
+			break;
+		}
+
+		case PROP_FRAME_PADDING:
+		{
+			if(value.length() < 2) return false;
+
+			m_regs->padding = readAsNumber<uint16_t>(value, 0);
+			break;
+		}
+
+		case PROP_FRAME_GAP:
+		{
+			if(value.length() < 4) return false;
+
+			m_regs->delay = readAsNumber<uint32_t>(value, 0);
+			break;
+		}
+
+		case PROP_TIMEOUT:
+		{
+			if(value.length() < 4) return false;
+
+			m_regs->timeout = readAsNumber<uint32_t>(value, 0);
+			break;
+		}
+
+		case PROP_OVERFLOW_COUNT:
+		{
+			// read-only
+			break;
+		}
+
+		default:
+		{
+			return false;
+		}
+	}
+
 	return true;
 }
 
-bool LatencyMeasurer::getProperty(const QByteArray &key, QByteArray &value)
+bool LatencyMeasurer::getProperty(PropertyID propID, QByteArray &value)
 {
+	if(!isReady()) return false;
+
+	switch(propID)
+	{
+		case PROP_ENABLE:
+		{
+			appendAsBytes<uint8_t>(value, m_regs->config & CFG_ENABLE);
+			break;
+		}
+
+		case PROP_ENABLE_LOG:
+		{
+			appendAsBytes<uint8_t>(value, !!(m_regs->config & CFG_LOG_ENABLE));
+			break;
+		}
+
+		case PROP_ENABLE_BROADCAST:
+		{
+			appendAsBytes<uint8_t>(value, !!(m_regs->config & CFG_BROADCAST));
+			break;
+		}
+
+		case PROP_MAC_ADDR:
+		{
+			value.append((char*) m_regs->mac_addr_a, 6);
+			value.append((char*) m_regs->mac_addr_b, 6);
+			break;
+		}
+
+		case PROP_IP_ADDR:
+		{
+			appendAsBytes(value, m_regs->ip_addr_a);
+			appendAsBytes(value, m_regs->ip_addr_b);
+			break;
+		}
+
+		case PROP_FRAME_PADDING:
+		{
+			appendAsBytes<uint16_t>(value, m_regs->padding);
+			break;
+		}
+
+		case PROP_FRAME_GAP:
+		{
+			appendAsBytes(value, m_regs->delay);
+			break;
+		}
+
+		case PROP_TIMEOUT:
+		{
+			appendAsBytes(value, m_regs->timeout);
+			break;
+		}
+
+		case PROP_OVERFLOW_COUNT:
+		{
+			appendAsBytes(value, m_regs->overflow_count);
+			break;
+		}
+
+		default:
+		{
+			return false;
+		}
+	}
+
 	return true;
 }

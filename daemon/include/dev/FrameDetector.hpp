@@ -27,39 +27,38 @@
 #define FD_PATTERN_B_DATA_OFFSET  0x6000
 #define FD_PATTERN_B_FLAGS_OFFSET 0x8000
 #define FD_MEM_SIZE               8192
+#define FD_NUM_PATTERNS           4
 
 class FrameDetector : public AbstractDevice
 {
 public:
+	static constexpr uint32_t CFG_ENABLE   = 1;
+	static constexpr uint32_t CFG_RESET    = 2;
+	static constexpr uint32_t CFG_FIX_CSUM = 4;
+
 	struct Registers
 	{
-		uint32_t config;
-		uint32_t fifo_occupancy;
-		uint32_t fifo_pop;
-		uint32_t _reserved;
+		uint16_t config;
+		uint16_t log_identifier;
+		uint32_t match_enable;
 
-		uint32_t time_l;
-		uint32_t time_h;
-		uint8_t match_dir;
-		uint8_t match_mask;
-		uint8_t match_ext_num;
-		uint8_t _reserved2;
-		uint8_t match_ext_data[16];
+		uint64_t overflow_count_a;
+		uint64_t overflow_count_b;
 	};
 
 public:
-	FrameDetector(const QByteArray &name);
+	FrameDetector(const QByteArray &name, uint32_t index);
 	~FrameDetector();
 
 	DeviceType getType() const;
-	uint32_t getIdentifier() const;
+	uint64_t getPorts() const;
 
 	bool isReady() const;
 	bool loadDevice(const void *fdt, int offset);
 
 	void setReset(bool reset);
-	bool setProperty(const QByteArray &key, const QByteArray &value);
-	bool getProperty(const QByteArray &key, QByteArray &value);
+	bool setProperty(PropertyID propID, const QByteArray &value);
+	bool getProperty(PropertyID propID, QByteArray &value);
 
 private:
 	volatile Registers *m_regs;

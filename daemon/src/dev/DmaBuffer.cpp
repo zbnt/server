@@ -29,7 +29,7 @@
 #include <BitstreamManager.hpp>
 
 DmaBuffer::DmaBuffer(const QByteArray &name)
-	: AbstractDevice(name), m_ptr(nullptr), m_memSize(0)
+	: AbstractDevice(name, 0x80000000), m_ptr(nullptr), m_memSize(0)
 { }
 
 DmaBuffer::~DmaBuffer()
@@ -43,11 +43,6 @@ DmaBuffer::~DmaBuffer()
 DeviceType DmaBuffer::getType() const
 {
 	return DEV_DMA_BUFFER;
-}
-
-uint32_t DmaBuffer::getIdentifier() const
-{
-	return 0x80000000;
 }
 
 uint64_t DmaBuffer::getPhysAddr() const
@@ -83,7 +78,7 @@ bool DmaBuffer::loadDevice(const void *fdt, int offset)
 		return false;
 	}
 
-	qDebug("[dev] D: Found %s with name %s and size %lu bytes", m_name.constData(), devName.constData(), m_memSize);
+	qDebug("[dev] D: Found %s with name %s and size %zu bytes", m_name.constData(), devName.constData(), m_memSize);
 
 	// Get physical address
 
@@ -131,17 +126,26 @@ bool DmaBuffer::loadDevice(const void *fdt, int offset)
 	return true;
 }
 
+void DmaBuffer::copyBuffer(QByteArray &out) const
+{
+	out.append((const char*) m_ptr, m_memSize);
+}
+
 void DmaBuffer::setReset(bool reset)
 {
+	Q_UNUSED(reset);
 }
 
-bool DmaBuffer::setProperty(const QByteArray &key, const QByteArray &value)
+bool DmaBuffer::setProperty(PropertyID propID, const QByteArray &value)
 {
-	return true;
+	Q_UNUSED(propID);
+	Q_UNUSED(value);
+	return false;
 }
 
-bool DmaBuffer::getProperty(const QByteArray &key, QByteArray &value)
+bool DmaBuffer::getProperty(PropertyID propID, QByteArray &value)
 {
-	return true;
+	Q_UNUSED(propID);
+	Q_UNUSED(value);
+	return false;
 }
-

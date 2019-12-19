@@ -25,6 +25,9 @@
 class SimpleTimer : public AbstractDevice
 {
 public:
+	static constexpr uint32_t CFG_ENABLE = 1;
+	static constexpr uint32_t CFG_RESET  = 2;
+
 	struct Registers
 	{
 		uint32_t config;
@@ -39,14 +42,13 @@ public:
 	~SimpleTimer();
 
 	DeviceType getType() const;
-	uint32_t getIdentifier() const;
 
 	bool isReady() const;
 	bool loadDevice(const void *fdt, int offset);
 
 	void setReset(bool reset);
-	bool setProperty(const QByteArray &key, const QByteArray &value);
-	bool getProperty(const QByteArray &key, QByteArray &value);
+	bool setProperty(PropertyID propID, const QByteArray &value);
+	bool getProperty(PropertyID propID, QByteArray &value);
 
 private:
 	volatile Registers *m_regs;

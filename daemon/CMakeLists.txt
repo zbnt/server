@@ -25,7 +25,16 @@ set(ZBNT_SW_SRC
 add_executable(zbnt_daemon ${ZBNT_SW_SRC})
 target_link_libraries(zbnt_daemon Qt5::Core Qt5::Network ${libfdt} -lpthread)
 target_include_directories(zbnt_daemon PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/../include")
-target_compile_definitions(zbnt_daemon PUBLIC ZBNT_CFG_PATH="${CFG_PATH}" ZBNT_FIRMWARE_PATH="${FIRMWARE_PATH}" ZBNT_SYSFS_PATH="${SYSFS_PATH}" ZBNT_CONFIGFS_PATH="${CONFIGFS_PATH}")
+
+target_compile_definitions(
+	zbnt_daemon PUBLIC
+	ZBNT_VERSION="${PROJECT_VERSION}"
+	ZBNT_VERSION_INT=${ZBNT_VERSION_INT}
+	ZBNT_CFG_PATH="${CFG_PATH}"
+	ZBNT_FIRMWARE_PATH="${FIRMWARE_PATH}"
+	ZBNT_SYSFS_PATH="${SYSFS_PATH}"
+	ZBNT_CONFIGFS_PATH="${CONFIGFS_PATH}"
+)
 
 install(
 	TARGETS zbnt_daemon

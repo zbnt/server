@@ -25,13 +25,15 @@
 class StatsCollector : public AbstractDevice
 {
 public:
-	static constexpr uint32_t CFG_ENABLE = 1;
-	static constexpr uint32_t CFG_RESET = 2;
-	static constexpr uint32_t CFG_HOLD = 3;
+	static constexpr uint32_t CFG_ENABLE     = 1;
+	static constexpr uint32_t CFG_RESET      = 2;
+	static constexpr uint32_t CFG_HOLD       = 4;
+	static constexpr uint32_t CFG_LOG_ENABLE = 8;
 
 	struct Registers
 	{
-		uint32_t config;
+		uint16_t config;
+		uint16_t log_identifier;
 		uint32_t sample_period;
 		uint64_t overflow_count;
 
@@ -45,22 +47,21 @@ public:
 	};
 
 public:
-	StatsCollector(const QByteArray &name);
+	StatsCollector(const QByteArray &name, uint32_t index);
 	~StatsCollector();
 
 	DeviceType getType() const;
-	uint32_t getIdentifier() const;
+	uint64_t getPorts() const;
 
 	bool isReady() const;
 	bool loadDevice(const void *fdt, int offset);
 
 	void setReset(bool reset);
-	bool setProperty(const QByteArray &key, const QByteArray &value);
-	bool getProperty(const QByteArray &key, QByteArray &value);
+	bool setProperty(PropertyID propID, const QByteArray &value);
+	bool getProperty(PropertyID propID, QByteArray &value);
 
 private:
 	volatile Registers *m_regs;
 	size_t m_regsSize;
-
 	uint8_t m_port;
 };

@@ -20,6 +20,8 @@
 
 #include <QByteArray>
 
+#include <Messages.hpp>
+
 enum DeviceType
 {
 	DEV_AXI_DMA = 1,
@@ -34,20 +36,22 @@ enum DeviceType
 class AbstractDevice
 {
 public:
-	AbstractDevice(const QByteArray &name);
+	AbstractDevice(const QByteArray &name, uint32_t index);
 	virtual ~AbstractDevice();
 
 	const QByteArray &getName() const;
 	virtual DeviceType getType() const = 0;
-	virtual uint32_t getIdentifier() const = 0;
+	virtual uint32_t getIndex() const;
+	virtual uint64_t getPorts() const;
 
 	virtual bool isReady() const = 0;
 	virtual bool loadDevice(const void *fdt, int offset) = 0;
 
 	virtual void setReset(bool reset) = 0;
-	virtual bool setProperty(const QByteArray &key, const QByteArray &value) = 0;
-	virtual bool getProperty(const QByteArray &key, QByteArray &value) = 0;
+	virtual bool setProperty(PropertyID propID, const QByteArray &value) = 0;
+	virtual bool getProperty(PropertyID propID, QByteArray &value) = 0;
 
 protected:
 	QByteArray m_name;
+	uint32_t m_idx;
 };
