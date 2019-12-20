@@ -32,11 +32,12 @@ void workerThread()
 		if(g_axiDma && g_axiDma->isReady())
 		{
 			g_axiDma->waitForInterrupt();
+
 			g_workerMutex.lock();
-
 			g_dmaBuffer->copyBuffer(g_msgBuffer);
-
 			g_workerMutex.unlock();
+
+			g_axiDma->setReset(1);
 			g_axiDma->clearInterrupts();
 			g_axiDma->startTransfer();
 		}

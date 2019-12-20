@@ -106,7 +106,7 @@ bool DmaBuffer::loadDevice(const void *fdt, int offset)
 	// Open memory map
 
 	QByteArray devPath = "/dev/" + devName;
-	int fd = open(devPath.constData(), O_RDONLY | O_SYNC);
+	int fd = open(devPath.constData(), O_RDONLY);
 
 	if(fd == -1)
 	{
@@ -114,10 +114,11 @@ bool DmaBuffer::loadDevice(const void *fdt, int offset)
 		return false;
 	}
 
-	m_ptr = (uint8_t*) mmap(NULL, m_memSize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	m_ptr = (uint8_t*) mmap(NULL, m_memSize, PROT_READ, MAP_SHARED, fd, 0);
 
-	if(!m_ptr)
+	if(!m_ptr || m_ptr == MAP_FAILED)
 	{
+		m_ptr = nullptr;
 		qCritical("[dev] E: Failed to mmap %s", devPath.constData());
 		return false;
 	}

@@ -97,8 +97,9 @@ bool StatsCollector::loadDevice(const void *fdt, int offset)
 
 	m_regs = (volatile Registers*) mmap(NULL, m_regsSize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 
-	if(!m_regs)
+	if(!m_regs || m_regs == MAP_FAILED)
 	{
+		m_regs = nullptr;
 		qCritical("[dev] E: Failed to mmap %s", uioDevice.constData());
 		return false;
 	}

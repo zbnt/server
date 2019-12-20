@@ -39,8 +39,8 @@ MeasurementServer::MeasurementServer(QObject *parent)
 	if(!m_server->listen(QHostAddress::Any, g_daemonCfg.mainPort))
 		qFatal("[net] F: Can't listen on TCP port %d", g_daemonCfg.mainPort);
 
-	if(!m_streamServer->listen(QHostAddress::Any, g_daemonCfg.streamPort))
-		qFatal("[net] F: Can't listen on TCP port %d", g_daemonCfg.streamPort);
+	/*if(!m_streamServer->listen(QHostAddress::Any, g_daemonCfg.streamPort))
+		qFatal("[net] F: Can't listen on TCP port %d", g_daemonCfg.streamPort);*/
 
 	qInfo("[net] I: Listening on TCP ports %d and %d", g_daemonCfg.mainPort, g_daemonCfg.streamPort);
 
@@ -67,196 +67,61 @@ void MeasurementServer::sendMeasurements()
 	else
 	{
 		QMutexLocker lock(&g_workerMutex);
-
 		g_msgBuffer.clear();
 	}
 }
 
-void MeasurementServer::onMessageReceived(quint8 id, const QByteArray &data)
+void MeasurementServer::onMessageReceived(quint16 id, const QByteArray &data)
 {
 	QMutexLocker lock(&g_workerMutex);
-/*
+
 	switch(id)
 	{
-		case MSG_ID_START:
+		case MSG_ID_PROGRAM_PL:
 		{
-			if(data.size() < 8) return;
+			if(!data.length()) break;
 
-			timer->max_time = readAsNumber<uint64_t>(data, 0);
-			timer->config = 1;
-			running = 1;
+			QString bitstreamName(data);
 
-			if(m_streamClient)
+			if(std::find(g_bitstreamList.cbegin(), g_bitstreamList.cend(), bitstreamName) != g_bitstreamList.cend())
 			{
-				m_streamClient->abort();
-			}
-
-			streamMode = 0;
-			m_timer->setInterval(100);
-
-			break;
-		}
-
-		case MSG_ID_START_STREAM:
-		{
-			if(data.size() < 2) return;
-
-			timer->max_time = 0xFFFFFFFF'FFFFFFFFull;
-			timer->config = 1;
-
-			running = 1;
-			streamMode = 1;
-
-			for(int i = 0; i < 4; ++i)
-			{
-				stats[i]->config = 1;
-
-				dataRate[i] = 0;
-				lastTxBytesCount[i] = 0;
-			}
-
-			m_timer->setInterval(readAsNumber<uint16_t>(data, 0));
-
-			break;
-		}
-
-		case MSG_ID_STOP:
-		{
-			if(m_streamClient)
-			{
-				m_streamClient->abort();
-			}
-
-			streamMode = 0;
-			m_timer->setInterval(100);
-
-			running = 0;
-			resetPL();
-			break;
-		}
-
-		case MSG_ID_SET_BITSTREAM:
-		{
-			if(data.size() < 1) return;
-
-			BitstreamID bid = (BitstreamID) readAsNumber<uint8_t>(data, 0);
-
-			running = 0;
-
-			if(bid != bitstream)
-			{
-				programPL(bid);
-				QThread::sleep(5);
-				resetPL();
+				loadBitstream(bitstreamName);
 			}
 
 			break;
 		}
 
-		case MSG_ID_SC_CFG:
+		case MSG_ID_SET_PROPERTY:
 		{
-			if(data.size() < 6) return;
+			if(data.length() < 3) break;
 
-			uint8_t i = readAsNumber<uint8_t>(data, 0);
+			uint8_t devID = data[0];
+			PropertyID propID = PropertyID(readAsNumber<uint16_t>(data, 1));
+			QByteArray value = data.mid(3);
 
-			if(i >= 4) return;
-
-			stats[i]->config = readAsNumber<uint8_t>(data, 1) | (1 << 3);
-			stats[i]->sample_period = readAsNumber<uint32_t>(data, 2);
-
-			break;
-		}
-
-		case MSG_ID_TG_CFG:
-		{
-			if(data.size() < 14) return;
-
-			uint8_t i = readAsNumber<uint8_t>(data, 0);
-
-			if((i >= 2 && bitstream != BITSTREAM_QUAD_TGEN) || i >= 4) return;
-
-			tgen[i]->config = readAsNumber<uint8_t>(data, 1);
-			tgen[i]->fsize = readAsNumber<uint16_t>(data, 2);
-			tgen[i]->fdelay = readAsNumber<uint32_t>(data, 4);
-			tgen[i]->lfsr_seed_val = readAsNumber<uint8_t>(data, 13);
-			tgen[i]->config |= 1 << 3;
-
-			uint8_t useBurst = readAsNumber<uint8_t>(data, 8);
-
-			if(useBurst)
+			if(devID < g_deviceList.length())
 			{
-				tgen[i]->burst_time_on = readAsNumber<uint16_t>(data, 9);
-				tgen[i]->burst_time_off = readAsNumber<uint16_t>(data, 11);
-				tgen[i]->config |= 1 << 2;
+				g_deviceList[devID]->setProperty(propID, value);
+			}
+			else if(devID == 0xFF)
+			{
+				g_axiTimer->setProperty(propID, value);
 			}
 
 			break;
 		}
 
-		case MSG_ID_TG_FRAME:
+		case MSG_ID_GET_PROPERTY:
 		{
-			if(data.size() < 15 || data.size() > 2049) return;
-
-			uint8_t i = readAsNumber<uint8_t>(data, 0);
-
-			if((i >= 2 && bitstream != BITSTREAM_QUAD_TGEN) || i >= 4) return;
-
-			memcpy_v((volatile uint8_t*) tgen[i] + TGEN_MEM_FRAME_OFFSET, data.constData() + 1, data.length() - 1);
-
+			// TODO
 			break;
 		}
 
-		case MSG_ID_TG_PATTERN:
+		default:
 		{
-			if(data.size() != 257) return;
-
-			uint8_t i = readAsNumber<uint8_t>(data, 0);
-
-			if((i >= 2 && bitstream != BITSTREAM_QUAD_TGEN) || i >= 4) return;
-
-			memcpy_v((volatile uint8_t*) tgen[i] + TGEN_MEM_PATTERN_OFFSET, data.constData() + 1, data.length() - 1);
-
 			break;
 		}
-
-		case MSG_ID_LM_CFG:
-		{
-			if(data.size() < 13) return;
-			if(bitstream != BITSTREAM_DUAL_TGEN_LATENCY) return;
-
-			measurer->config = readAsNumber<uint8_t>(data, 0);
-			measurer->padding = readAsNumber<uint32_t>(data, 1);
-			measurer->delay = readAsNumber<uint32_t>(data, 5);
-			measurer->timeout = readAsNumber<uint32_t>(data, 9);
-			break;
-		}
-
-		case MSG_ID_FD_CFG:
-		{
-			if(data.size() < 3) return;
-			if(bitstream != BITSTREAM_DUAL_TGEN_DETECTOR) return;
-
-			detector->config = readAsNumber<uint8_t>(data, 0) & 0b1;
-			detector->config |= (readAsNumber<uint8_t>(data, 1) & 0b1111'1111) << 2;
-			detector->config |= (readAsNumber<uint8_t>(data, 2) & 0b1) << 10;
-			break;
-		}
-
-		case MSG_ID_FD_PATTERNS:
-		{
-			if(data.size() < FD_MEM_SIZE*4 + 1) return;
-			if(bitstream != BITSTREAM_DUAL_TGEN_DETECTOR) return;
-
-			uint8_t i = readAsNumber<uint8_t>(data, 0);
-
-			if(!i)
-			{
-				memcpy_v((volatile uint8_t*) detector + FD_PATTERN_A_DATA_OFFSET, data.constData() + 1, FD_MEM_SIZE*4);
-			}
-
-			break;
-		}
-	}*/
+	}
 }
 
 void MeasurementServer::onIncomingConnection()
@@ -282,9 +147,9 @@ void MeasurementServer::onIncomingConnection()
 
 void MeasurementServer::onIncomingStreamConnection()
 {
-	/*QTcpSocket *connection = m_streamServer->nextPendingConnection();
+	QTcpSocket *connection = m_streamServer->nextPendingConnection();
 
-	if(!m_streamClient && streamMode)
+	if(!m_streamClient)
 	{
 		m_streamClient = connection;
 		m_streamReadBuffer.clear();
@@ -298,7 +163,7 @@ void MeasurementServer::onIncomingStreamConnection()
 	{
 		connection->abort();
 		connection->deleteLater();
-	}*/
+	}
 }
 
 void MeasurementServer::onReadyRead()
@@ -310,7 +175,7 @@ void MeasurementServer::onNetworkStateChanged(QAbstractSocket::SocketState state
 {
 	if(state == QAbstractSocket::UnconnectedState)
 	{
-		qInfo("[net] I: Stream client disconnected");
+		qInfo("[net] I: Client disconnected");
 
 		m_client->deleteLater();
 		m_client = nullptr;
@@ -319,50 +184,16 @@ void MeasurementServer::onNetworkStateChanged(QAbstractSocket::SocketState state
 
 void MeasurementServer::onStreamReadyRead()
 {
-	m_streamReadBuffer += m_streamClient->readAll();
+	m_streamClient->readAll();
 
-	// Frame format:
-	//    [ EN0 | EN1 | EN2 | EN3 | PSIZE0 | PSIZE1 | PSIZE2 | PSIZE3 | FDELAY0 | FDELAY1 | FDELAY2 | FDELAY3 ]
-	//       4     4     4     4      4        4        4        4         4         4         4         4
-	//       = 48 bytes
-
-	if(m_streamReadBuffer.length() >= 48*2)
-	{
-		m_streamReadBuffer.remove(0, m_streamReadBuffer.length() - 48 - m_streamReadBuffer.length() % 48);
-	}
-
-	if(m_streamReadBuffer.length() >= 48)
-	{
-		QMutexLocker lock(&g_workerMutex);
-
-		/*tgen[0]->config = readAsNumber<uint8_t>(m_streamReadBuffer, 0);
-		tgen[1]->config = readAsNumber<uint8_t>(m_streamReadBuffer, 4);
-
-		tgen[0]->fsize = readAsNumber<uint16_t>(m_streamReadBuffer, 16);
-		tgen[1]->fsize = readAsNumber<uint16_t>(m_streamReadBuffer, 20);
-
-		tgen[0]->fdelay = readAsNumber<uint32_t>(m_streamReadBuffer, 32);
-		tgen[1]->fdelay = readAsNumber<uint32_t>(m_streamReadBuffer, 36);
-
-		if(bitstream == BITSTREAM_QUAD_TGEN)
-		{
-			tgen[2]->config = readAsNumber<uint8_t>(m_streamReadBuffer, 8);
-			tgen[3]->config = readAsNumber<uint8_t>(m_streamReadBuffer, 12);
-
-			tgen[2]->fsize = readAsNumber<uint16_t>(m_streamReadBuffer, 24);
-			tgen[3]->fsize = readAsNumber<uint16_t>(m_streamReadBuffer, 28);
-
-			tgen[2]->fdelay = readAsNumber<uint32_t>(m_streamReadBuffer, 40);
-			tgen[3]->fdelay = readAsNumber<uint32_t>(m_streamReadBuffer, 44);
-		}*/
-	}
+	// TODO
 }
 
 void MeasurementServer::onStreamNetworkStateChanged(QAbstractSocket::SocketState state)
 {
 	if(state == QAbstractSocket::UnconnectedState)
 	{
-		qInfo("[net] I: Client disconnected");
+		qInfo("[net] I: Stream client disconnected");
 
 		m_streamClient->deleteLater();
 		m_streamClient = nullptr;

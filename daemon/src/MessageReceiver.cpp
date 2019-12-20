@@ -63,12 +63,19 @@ void MessageReceiver::handleIncomingData(const QByteArray &readData)
 
 					case 1:
 					{
-						m_rxMsgSize = c;
+						m_rxMsgID |= c << 8;
 						m_rxByteCount++;
 						break;
 					}
 
 					case 2:
+					{
+						m_rxMsgSize = c;
+						m_rxByteCount++;
+						break;
+					}
+
+					case 3:
 					{
 						m_rxMsgSize |= c << 8;
 						m_rxByteCount = 0;

@@ -93,8 +93,9 @@ bool AxiDma::loadDevice(const void *fdt, int offset)
 
 	m_regs = (volatile Registers*) mmap(NULL, m_regsSize, PROT_READ | PROT_WRITE, MAP_SHARED, m_fd, 0);
 
-	if(!m_regs)
+	if(!m_regs || m_regs == MAP_FAILED)
 	{
+		m_regs = nullptr;
 		qCritical("[dev] E: Failed to mmap %s", uioDevice.constData());
 		return false;
 	}
@@ -120,7 +121,7 @@ uint32_t AxiDma::waitForInterrupt()
 
 void AxiDma::clearInterrupts()
 {
-	m_regs->s2mm_dmasr |= 0x7000;
+	m_regs->s2mm_dmasr = 0x7000;
 }
 
 void AxiDma::startTransfer()
@@ -132,7 +133,11 @@ void AxiDma::startTransfer()
 
 void AxiDma::setReset(bool reset)
 {
-	Q_UNUSED(reset);
+	if(reset && isReady())
+	{
+		m_regs->s2mm_dmacr = 4;
+		while(m_regs->s2mm_dmacr & 4) asm("NOP");
+	}
 }
 
 bool AxiDma::setProperty(PropertyID propID, const QByteArray &value)

@@ -30,7 +30,7 @@ public:
 	DiscoveryServer(QObject *parent = nullptr);
 	~DiscoveryServer();
 
-	void onMessageReceived(quint8 id, const QByteArray &data);
+	void onMessageReceived(quint16 id, const QByteArray &data);
 	void onReadyRead();
 
 private:

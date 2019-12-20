@@ -32,7 +32,7 @@ public:
 	~MeasurementServer();
 
 	void sendMeasurements();
-	void onMessageReceived(quint8 id, const QByteArray &data);
+	void onMessageReceived(quint16 id, const QByteArray &data);
 
 	void onIncomingConnection();
 	void onIncomingStreamConnection();

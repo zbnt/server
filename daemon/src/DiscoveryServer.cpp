@@ -57,7 +57,7 @@ DiscoveryServer::DiscoveryServer(QObject *parent) : QObject(parent)
 DiscoveryServer::~DiscoveryServer()
 { }
 
-void DiscoveryServer::onMessageReceived(quint8 id, const QByteArray &data)
+void DiscoveryServer::onMessageReceived(quint16 id, const QByteArray &data)
 {
 	if(id == MSG_ID_DISCOVERY && data.length() == 8)
 	{
@@ -110,7 +110,7 @@ void DiscoveryServer::onReadyRead()
 			if(ip4.isNull() && ip6.isNull()) continue;
 
 			discoveryResponse.append(MSG_MAGIC_IDENTIFIER, 4);
-			appendAsBytes<quint8>(discoveryResponse, MSG_ID_DISCOVERY);
+			appendAsBytes<quint16>(discoveryResponse, MSG_ID_DISCOVERY);
 			appendAsBytes<quint16>(discoveryResponse, 4 + 8 + 4 + 16 + 4 + host.length());
 			appendAsBytes<quint32>(discoveryResponse, ZBNT_VERSION_INT);
 			discoveryResponse.append(m_recvdTime);
