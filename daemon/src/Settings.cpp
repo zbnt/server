@@ -58,19 +58,19 @@ void loadSettings(const char *path, const char *profile)
 	//
 
 	bool ok = false;
-	g_daemonCfg.port = -1;
+	g_daemonCfg.port = 0;
 
 	if(cfg.contains("listenPort"))
 	{
-		int32_t port = cfg.value("listenPort").toString().toInt(&ok);
+		uint16_t port = cfg.value("listenPort").toString().toUShort(&ok);
 
-		if(ok && port >= -1 && port <= 65535)
+		if(ok)
 		{
 			g_daemonCfg.port = port;
 		}
 		else
 		{
-			qWarning("[cfg] W: Invalid value for listenPort, using default value: -1");
+			qWarning("[cfg] W: Invalid value for listenPort, using default value: 0");
 		}
 	}
 

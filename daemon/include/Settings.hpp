@@ -34,7 +34,7 @@ struct DaemonConfig
 	QString deviceName;
 
 	DaemonModes mode;
-	int32_t port;
+	uint16_t port;
 };
 
 extern DaemonConfig g_daemonCfg;
