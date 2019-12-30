@@ -45,6 +45,11 @@ DeviceType DmaBuffer::getType() const
 	return DEV_DMA_BUFFER;
 }
 
+const char *DmaBuffer::getVirtAddr() const
+{
+	return (const char*) m_ptr;
+}
+
 uint64_t DmaBuffer::getPhysAddr() const
 {
 	return m_physAddr;
@@ -127,9 +132,14 @@ bool DmaBuffer::loadDevice(const void *fdt, int offset)
 	return true;
 }
 
-void DmaBuffer::copyBuffer(QByteArray &out) const
+void DmaBuffer::appendBuffer(QByteArray &out) const
 {
 	out.append((const char*) m_ptr, m_memSize);
+}
+
+void DmaBuffer::sendBuffer(QAbstractSocket *thread) const
+{
+	thread->write((const char*) m_ptr, m_memSize);
 }
 
 void DmaBuffer::setReset(bool reset)

@@ -24,10 +24,10 @@
 #include <sys/mman.h>
 
 #include <QCoreApplication>
+#include <QThread>
 
 #include <Utils.hpp>
 #include <Settings.hpp>
-#include <WorkerThread.hpp>
 #include <DiscoveryServer.hpp>
 #include <BitstreamManager.hpp>
 #include <MeasurementServer.hpp>
@@ -62,12 +62,8 @@ int main(int argc, char **argv)
 
 	// Initialize Qt application
 
-	QThread *workerThreadHandle = QThread::create(workerThread);
-	workerThreadHandle->start();
-	workerThreadHandle->setPriority(QThread::TimeCriticalPriority);
-
-	new DiscoveryServer();
-	new MeasurementServer();
+	g_discoverySrv = new DiscoveryServer();
+	g_measurementSrv = new MeasurementServer();
 
 	return app.exec();
 }

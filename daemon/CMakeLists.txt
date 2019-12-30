@@ -6,7 +6,6 @@ set(ZBNT_SW_SRC
 	"src/Main.cpp"
 	"src/Utils.cpp"
 	"src/Settings.cpp"
-	"src/WorkerThread.cpp"
 	"src/MessageReceiver.cpp"
 	"src/DiscoveryServer.cpp"
 	"src/BitstreamManager.cpp"

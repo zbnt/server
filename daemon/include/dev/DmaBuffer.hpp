@@ -20,6 +20,8 @@
 
 #include <cstdint>
 
+#include <QAbstractSocket>
+
 #include <dev/AbstractDevice.hpp>
 
 class DmaBuffer : public AbstractDevice
@@ -29,13 +31,15 @@ public:
 	~DmaBuffer();
 
 	DeviceType getType() const;
+	const char *getVirtAddr() const;
 	uint64_t getPhysAddr() const;
 	size_t getMemSize() const;
 
 	bool isReady() const;
 	bool loadDevice(const void *fdt, int offset);
 
-	void copyBuffer(QByteArray &out) const;
+	void appendBuffer(QByteArray &out) const;
+	void sendBuffer(QAbstractSocket *thread) const;
 
 	void setReset(bool reset);
 	bool setProperty(PropertyID propID, const QByteArray &value);

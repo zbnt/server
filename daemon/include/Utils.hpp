@@ -53,9 +53,7 @@ T readAsNumber(const QByteArray &data, quint32 offset)
 	return res;
 }
 
-extern void memcpy_v(volatile void *dst, volatile const void *src, uint32_t count);
-extern void buildMessage(uint8_t msgID, uint8_t devID, const QByteArray &params);
-
+extern int64_t getMemoryUsage();
 extern bool fdtEnumerateDevices(const void *fdt, int offset, const std::function<bool(const QByteArray&, int)> &callback);
 extern bool fdtGetStringProp(const void *fdt, int offset, const char *name, QByteArray &out);
 

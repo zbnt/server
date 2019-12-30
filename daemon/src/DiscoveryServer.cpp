@@ -24,6 +24,9 @@
 
 #include <Utils.hpp>
 #include <Settings.hpp>
+#include <MeasurementServer.hpp>
+
+DiscoveryServer *g_discoverySrv = nullptr;
 
 DiscoveryServer::DiscoveryServer(QObject *parent) : QObject(parent)
 {
@@ -133,8 +136,8 @@ void DiscoveryServer::onReadyRead()
 				discoveryResponse.append(16, '\0');
 			}
 
-			appendAsBytes<quint16>(discoveryResponse, g_daemonCfg.mainPort);
-			appendAsBytes<quint16>(discoveryResponse, g_daemonCfg.streamPort);
+			appendAsBytes<quint16>(discoveryResponse, g_daemonCfg.port);
+			appendAsBytes<quint16>(discoveryResponse, 0); // Reserved
 
 			discoveryResponse.append(host);
 

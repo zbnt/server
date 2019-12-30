@@ -58,41 +58,21 @@ void loadSettings(const char *path, const char *profile)
 	//
 
 	bool ok = false;
-	g_daemonCfg.mainPort = 5464;
+	g_daemonCfg.port = -1;
 
-	if(cfg.contains("main_port"))
+	if(cfg.contains("listenPort"))
 	{
-		quint16 mainPort = cfg.value("main_port").toString().toUShort(&ok);
+		int32_t port = cfg.value("listenPort").toString().toInt(&ok);
 
-		if(ok)
+		if(ok && port >= -1 && port <= 65535)
 		{
-			g_daemonCfg.mainPort = mainPort;
+			g_daemonCfg.port = port;
 		}
 		else
 		{
-			qWarning("[cfg] W: Invalid value for main_port, using default value.");
+			qWarning("[cfg] W: Invalid value for listenPort, using default value: -1");
 		}
 	}
-
-	//
-
-	g_daemonCfg.streamPort = 5465;
-
-	if(cfg.contains("stream_port"))
-	{
-		quint16 streamPort = cfg.value("stream_port").toString().toUShort(&ok);
-
-		if(ok)
-		{
-			g_daemonCfg.streamPort = streamPort;
-		}
-		else
-		{
-			qWarning("[cfg] W: Invalid value for stream_port, using default value.");
-		}
-	}
-
-	//
 
 	g_daemonCfg.deviceName = profile;
 }

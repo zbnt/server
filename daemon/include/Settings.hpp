@@ -34,9 +34,7 @@ struct DaemonConfig
 	QString deviceName;
 
 	DaemonModes mode;
-
-	quint16 mainPort;
-	quint16 streamPort;
+	int32_t port;
 };
 
 extern DaemonConfig g_daemonCfg;

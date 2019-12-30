@@ -31,22 +31,19 @@ public:
 	MeasurementServer(QObject *parent = nullptr);
 	~MeasurementServer();
 
-	void sendMeasurements();
+	void flushDmaNetBuffer();
 	void onMessageReceived(quint16 id, const QByteArray &data);
 
 	void onIncomingConnection();
-	void onIncomingStreamConnection();
-
 	void onReadyRead();
 	void onNetworkStateChanged(QAbstractSocket::SocketState state);
 
-	void onStreamReadyRead();
-	void onStreamNetworkStateChanged(QAbstractSocket::SocketState state);
-
 private:
-	QTimer *m_timer = nullptr;
-	QTcpServer *m_server = nullptr, *m_streamServer = nullptr;
-	QTcpSocket *m_client = nullptr, *m_streamClient = nullptr;
+	QByteArray m_pendingDmaData;
 
-	QByteArray m_streamReadBuffer;
+	QTimer *m_timer = nullptr;
+	QTcpServer *m_server = nullptr;
+	QTcpSocket *m_client = nullptr;
 };
+
+extern MeasurementServer *g_measurementSrv;

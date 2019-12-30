@@ -39,3 +39,4 @@ private:
 	QUdpSocket *m_server = nullptr;
 };
 
+extern DiscoveryServer *g_discoverySrv;

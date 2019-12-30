@@ -18,6 +18,7 @@
 
 #include <dev/AxiDma.hpp>
 
+#include <poll.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -30,7 +31,7 @@
 #include <dev/DmaBuffer.hpp>
 
 AxiDma::AxiDma(const QByteArray &name)
-	: AbstractDevice(name, 0x80000000), m_regs(nullptr), m_regsSize(0), m_fd(-1)
+	: AbstractDevice(name, 0x80000000), m_regs(nullptr), m_regsSize(0), m_irq(0), m_fd(-1)
 { }
 
 AxiDma::~AxiDma()
@@ -53,7 +54,7 @@ DeviceType AxiDma::getType() const
 
 bool AxiDma::isReady() const
 {
-	return m_regs && m_regs->s2mm_da;
+	return m_regs;
 }
 
 bool AxiDma::loadDevice(const void *fdt, int offset)
@@ -112,32 +113,41 @@ bool AxiDma::loadDevice(const void *fdt, int offset)
 	return true;
 }
 
-uint32_t AxiDma::waitForInterrupt()
+bool AxiDma::waitForInterrupt(int timeout)
 {
-	uint32_t res = 0;
-	read(m_fd, &res, sizeof(uint32_t));
-	return res;
+	pollfd pfd;
+	pfd.fd = m_fd;
+	pfd.events = POLLIN;
+
+	if(poll(&pfd, 1, timeout) >= 1)
+	{
+		read(m_fd, &m_irq, sizeof(uint32_t));
+		return true;
+	}
+
+	return false;
 }
 
 void AxiDma::clearInterrupts()
 {
-	m_regs->s2mm_dmasr = 0x7000;
+	m_regs->config = 0;
+
+	m_regs->irq = 1;
+	write(m_fd, &m_irq, sizeof(uint32_t));
+
+	m_regs->config = 1;
 }
 
 void AxiDma::startTransfer()
 {
-	m_regs->s2mm_dmacr |= 1 | (1 << 12);
-	m_regs->s2mm_da = g_dmaBuffer->getPhysAddr();
-	m_regs->s2mm_length = g_dmaBuffer->getMemSize();
+	m_regs->mem_base = g_dmaBuffer->getPhysAddr();
+	m_regs->mem_size = g_dmaBuffer->getMemSize();
+	m_regs->config = 1;
 }
 
 void AxiDma::setReset(bool reset)
 {
-	if(reset && isReady())
-	{
-		m_regs->s2mm_dmacr = 4;
-		while(m_regs->s2mm_dmacr & 4) asm("NOP");
-	}
+	Q_UNUSED(reset);
 }
 
 bool AxiDma::setProperty(PropertyID propID, const QByteArray &value)
@@ -152,4 +162,9 @@ bool AxiDma::getProperty(PropertyID propID, QByteArray &value)
 	Q_UNUSED(propID);
 	Q_UNUSED(value);
 	return false;
+}
+
+uint32_t AxiDma::getLastMessageEnd()
+{
+	return m_regs->last_msg_end;
 }

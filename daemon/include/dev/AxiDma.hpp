@@ -27,20 +27,13 @@ class AxiDma : public AbstractDevice
 public:
 	struct Registers
 	{
-		uint32_t mm2s_dmacr;     // +0
-		uint32_t mm2s_dmasr;     // +4
-		uint32_t __reserved1[4]; // +8
-		uint64_t mm2s_sa;        // +24
-		uint32_t __reserved2[2];
-		uint32_t mm2s_length;    // +40
-		uint32_t __reserved3;
-
-		uint32_t s2mm_dmacr;     // +48
-		uint32_t s2mm_dmasr;     // +52
-		uint32_t __reserved4[4];
-		uint64_t s2mm_da;        // +72
-		uint32_t __reserved5[2];
-		uint32_t s2mm_length;    // +88
+		uint16_t config;
+		uint16_t status;
+		uint32_t irq;
+		uint64_t mem_base;
+		uint32_t mem_size;
+		uint32_t bytes_written;
+		uint32_t last_msg_end;
 	};
 
 public:
@@ -52,16 +45,18 @@ public:
 	bool isReady() const;
 	bool loadDevice(const void *fdt, int offset);
 
-	uint32_t waitForInterrupt();
+	bool waitForInterrupt(int timeout);
 	void clearInterrupts();
 	void startTransfer();
 
 	void setReset(bool reset);
 	bool setProperty(PropertyID propID, const QByteArray &value);
 	bool getProperty(PropertyID propID, QByteArray &value);
+	uint32_t getLastMessageEnd();
 
 private:
 	volatile Registers *m_regs;
 	size_t m_regsSize;
+	uint32_t m_irq;
 	int m_fd;
 };

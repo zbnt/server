@@ -22,59 +22,61 @@
 
 #include <Utils.hpp>
 #include <Settings.hpp>
-#include <WorkerThread.hpp>
 #include <BitstreamManager.hpp>
+
+MeasurementServer *g_measurementSrv = nullptr;
 
 MeasurementServer::MeasurementServer(QObject *parent)
 	: QObject(parent)
 {
 	m_timer = new QTimer(this);
-	m_timer->setInterval(100);
+	m_server = new QTcpServer(this);
+
+	m_timer->setInterval(0);
 	m_timer->setSingleShot(false);
 	m_timer->start();
 
-	m_server = new QTcpServer(this);
-	m_streamServer = new QTcpServer(this);
+	if(!m_server->listen(QHostAddress::Any, g_daemonCfg.port))
+		qFatal("[net] F: Can't listen on TCP port");
 
-	if(!m_server->listen(QHostAddress::Any, g_daemonCfg.mainPort))
-		qFatal("[net] F: Can't listen on TCP port %d", g_daemonCfg.mainPort);
+	g_daemonCfg.port = m_server->serverPort();
 
-	/*if(!m_streamServer->listen(QHostAddress::Any, g_daemonCfg.streamPort))
-		qFatal("[net] F: Can't listen on TCP port %d", g_daemonCfg.streamPort);*/
+	qInfo("[net] I: Listening on TCP port %d", g_daemonCfg.port);
 
-	qInfo("[net] I: Listening on TCP ports %d and %d", g_daemonCfg.mainPort, g_daemonCfg.streamPort);
-
-	connect(m_timer, &QTimer::timeout, this, &MeasurementServer::sendMeasurements);
+	connect(m_timer, &QTimer::timeout, this, &MeasurementServer::flushDmaNetBuffer);
 	connect(m_server, &QTcpServer::newConnection, this, &MeasurementServer::onIncomingConnection);
-	connect(m_streamServer, &QTcpServer::newConnection, this, &MeasurementServer::onIncomingStreamConnection);
 }
 
 MeasurementServer::~MeasurementServer()
 { }
 
-void MeasurementServer::sendMeasurements()
+void MeasurementServer::flushDmaNetBuffer()
 {
-	if(m_client)
+	if(g_axiDma->waitForInterrupt(0))
 	{
-		QMutexLocker lock(&g_workerMutex);
+		const char *buffer = g_dmaBuffer->getVirtAddr();
+		uint32_t bufferSize = g_dmaBuffer->getMemSize();
+		uint32_t msgEnd = g_axiDma->getLastMessageEnd();
 
-		if(g_msgBuffer.length())
+		if(m_client)
 		{
-			m_client->write(g_msgBuffer);
-			g_msgBuffer.clear();
+			m_client->write(m_pendingDmaData);
+			m_client->write(buffer, msgEnd);
 		}
-	}
-	else
-	{
-		QMutexLocker lock(&g_workerMutex);
-		g_msgBuffer.clear();
+
+		m_pendingDmaData.clear();
+
+		if(msgEnd != bufferSize)
+		{
+			m_pendingDmaData.append(buffer + msgEnd, bufferSize - msgEnd);
+		}
+
+		g_axiDma->clearInterrupts();
 	}
 }
 
 void MeasurementServer::onMessageReceived(quint16 id, const QByteArray &data)
 {
-	QMutexLocker lock(&g_workerMutex);
-
 	switch(id)
 	{
 		case MSG_ID_PROGRAM_PL:
@@ -145,27 +147,6 @@ void MeasurementServer::onIncomingConnection()
 	}
 }
 
-void MeasurementServer::onIncomingStreamConnection()
-{
-	QTcpSocket *connection = m_streamServer->nextPendingConnection();
-
-	if(!m_streamClient)
-	{
-		m_streamClient = connection;
-		m_streamReadBuffer.clear();
-
-		qInfo("[net] I: Incoming stream connection: %s", qUtf8Printable(m_client->peerAddress().toString()));
-
-		connect(m_streamClient, &QTcpSocket::readyRead, this, &MeasurementServer::onStreamReadyRead);
-		connect(m_streamClient, &QTcpSocket::stateChanged, this, &MeasurementServer::onStreamNetworkStateChanged);
-	}
-	else
-	{
-		connection->abort();
-		connection->deleteLater();
-	}
-}
-
 void MeasurementServer::onReadyRead()
 {
 	handleIncomingData(m_client->readAll());
@@ -179,23 +160,5 @@ void MeasurementServer::onNetworkStateChanged(QAbstractSocket::SocketState state
 
 		m_client->deleteLater();
 		m_client = nullptr;
-	}
-}
-
-void MeasurementServer::onStreamReadyRead()
-{
-	m_streamClient->readAll();
-
-	// TODO
-}
-
-void MeasurementServer::onStreamNetworkStateChanged(QAbstractSocket::SocketState state)
-{
-	if(state == QAbstractSocket::UnconnectedState)
-	{
-		qInfo("[net] I: Stream client disconnected");
-
-		m_streamClient->deleteLater();
-		m_streamClient = nullptr;
 	}
 }

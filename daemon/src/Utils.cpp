@@ -18,27 +18,45 @@
 
 #include <Utils.hpp>
 
-#include <Messages.hpp>
-#include <WorkerThread.hpp>
+#include <QFile>
+#include <QVector>
+#include <QTextStream>
 
-void memcpy_v(volatile void *dst, volatile const void *src, uint32_t count)
+int64_t getMemoryUsage()
 {
-	volatile uint8_t *dst8 = (volatile uint8_t*) dst;
-	volatile uint8_t *src8 = (volatile uint8_t*) src;
+	QFile statusFile("/proc/self/status");
 
-	while(count--)
+	if(statusFile.open(QIODevice::ReadOnly))
 	{
-		*dst8++ = *src8++;
-	}
-}
+		QTextStream statusStream(&statusFile);
+		QString line;
 
-void buildMessage(uint8_t msgID, uint8_t devID, const QByteArray &params)
-{
-	g_msgBuffer.append(MSG_MAGIC_IDENTIFIER, 4);
-	appendAsBytes<quint8>(g_msgBuffer, msgID);
-	appendAsBytes<quint8>(g_msgBuffer, devID);
-	appendAsBytes<quint16>(g_msgBuffer, params.size());
-	g_msgBuffer.append(params);
+		while(!(line = statusStream.readLine()).isNull())
+		{
+			QVector<QStringRef> lineFields = line.splitRef(QRegExp("\\s+"), QString::SkipEmptyParts);
+
+			if(lineFields.size() == 3 && lineFields[0] == "VmSize:")
+			{
+				bool ok = false;
+				int64_t res = lineFields[1].toLongLong(&ok);
+
+				if(ok)
+				{
+					for(const char *u : {"B", "kB", "MB", "GB", "TB"})
+					{
+						if(lineFields[2] == u)
+						{
+							return res;
+						}
+
+						res *= 1000;
+					}
+				}
+			}
+		}
+	}
+
+	return -1;
 }
 
 bool fdtEnumerateDevices(const void *fdt, int offset, const std::function<bool(const QByteArray&, int)> &callback)
