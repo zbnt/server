@@ -22,17 +22,6 @@
 
 #include <Messages.hpp>
 
-enum DeviceType
-{
-	DEV_AXI_DMA = 1,
-	DEV_DMA_BUFFER,
-	DEV_SIMPLE_TIMER,
-	DEV_FRAME_DETECTOR,
-	DEV_STATS_COLLECTOR,
-	DEV_LATENCY_MEASURER,
-	DEV_TRAFFIC_GENERATOR
-};
-
 class AbstractDevice
 {
 public:
