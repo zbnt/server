@@ -16,48 +16,7 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <Utils.hpp>
-
-#include <QFile>
-#include <QVector>
-#include <QTextStream>
-
-int64_t getMemoryUsage()
-{
-	QFile statusFile("/proc/self/status");
-
-	if(statusFile.open(QIODevice::ReadOnly))
-	{
-		QTextStream statusStream(&statusFile);
-		QString line;
-
-		while(!(line = statusStream.readLine()).isNull())
-		{
-			QVector<QStringRef> lineFields = line.splitRef(QRegExp("\\s+"), QString::SkipEmptyParts);
-
-			if(lineFields.size() == 3 && lineFields[0] == "VmSize:")
-			{
-				bool ok = false;
-				int64_t res = lineFields[1].toLongLong(&ok);
-
-				if(ok)
-				{
-					for(const char *u : {"B", "kB", "MB", "GB", "TB"})
-					{
-						if(lineFields[2] == u)
-						{
-							return res;
-						}
-
-						res *= 1000;
-					}
-				}
-			}
-		}
-	}
-
-	return -1;
-}
+#include <FdtUtils.hpp>
 
 bool fdtEnumerateDevices(const void *fdt, int offset, const std::function<bool(const QByteArray&, int)> &callback)
 {

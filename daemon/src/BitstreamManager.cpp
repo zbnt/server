@@ -27,7 +27,7 @@
 #include <unistd.h>
 #include <sys/mman.h>
 
-#include <Utils.hpp>
+#include <FdtUtils.hpp>
 #include <Settings.hpp>
 #include <dev/AxiDma.hpp>
 #include <dev/DmaBuffer.hpp>

@@ -24,7 +24,7 @@
 
 #include <QDebug>
 
-#include <Utils.hpp>
+#include <FdtUtils.hpp>
 #include <BitstreamManager.hpp>
 
 TrafficGenerator::TrafficGenerator(const QByteArray &name, uint32_t index)

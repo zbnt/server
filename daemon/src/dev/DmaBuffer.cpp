@@ -25,7 +25,7 @@
 #include <QFile>
 #include <QDebug>
 
-#include <Utils.hpp>
+#include <FdtUtils.hpp>
 #include <BitstreamManager.hpp>
 
 DmaBuffer::DmaBuffer(const QByteArray &name)

@@ -24,7 +24,7 @@
 
 #include <QDebug>
 
-#include <Utils.hpp>
+#include <FdtUtils.hpp>
 #include <BitstreamManager.hpp>
 
 SimpleTimer::SimpleTimer(const QByteArray &name)

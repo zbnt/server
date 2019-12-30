@@ -2,14 +2,16 @@
 find_package(Qt5 COMPONENTS Core Network REQUIRED)
 find_library(libfdt "libfdt.so")
 
-set(ZBNT_SW_SRC
+set(ZBNT_DAEMON_SRC
 	"src/Main.cpp"
-	"src/Utils.cpp"
+	"src/FdtUtils.cpp"
 	"src/Settings.cpp"
 	"src/MessageReceiver.cpp"
 	"src/DiscoveryServer.cpp"
 	"src/BitstreamManager.cpp"
 	"src/MeasurementServer.cpp"
+
+	"../common/src/Utils.cpp"
 
 	"src/dev/AbstractDevice.cpp"
 	"src/dev/AxiDma.cpp"
@@ -21,7 +23,7 @@ set(ZBNT_SW_SRC
 	"src/dev/TrafficGenerator.cpp"
 )
 
-add_executable(zbnt_daemon ${ZBNT_SW_SRC})
+add_executable(zbnt_daemon ${ZBNT_DAEMON_SRC})
 target_link_libraries(zbnt_daemon Qt5::Core Qt5::Network ${libfdt} -lpthread)
 target_include_directories(zbnt_daemon PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/../common/include")
 
