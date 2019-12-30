@@ -23,7 +23,7 @@ set(ZBNT_SW_SRC
 
 add_executable(zbnt_daemon ${ZBNT_SW_SRC})
 target_link_libraries(zbnt_daemon Qt5::Core Qt5::Network ${libfdt} -lpthread)
-target_include_directories(zbnt_daemon PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/../include")
+target_include_directories(zbnt_daemon PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/../common/include")
 
 target_compile_definitions(
 	zbnt_daemon PUBLIC
