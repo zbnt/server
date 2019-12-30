@@ -79,6 +79,12 @@ void MeasurementServer::onMessageReceived(quint16 id, const QByteArray &data)
 {
 	switch(id)
 	{
+		case MSG_ID_HELLO:
+		{
+			// TODO
+			break;
+		}
+
 		case MSG_ID_PROGRAM_PL:
 		{
 			if(!data.length()) break;
@@ -136,6 +142,19 @@ void MeasurementServer::onIncomingConnection()
 		m_client->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
 
 		qInfo("[net] I: Incoming connection: %s", qUtf8Printable(m_client->peerAddress().toString()));
+
+		QByteArray bitstreamList;
+		appendAsBytes<uint16_t>(bitstreamList, g_bitstreamList.size());
+
+		for(const QString &bitName : g_bitstreamList)
+		{
+			const QByteArray bitNameUTF8 = bitName.toUtf8();
+
+			appendAsBytes<uint16_t>(bitstreamList, bitNameUTF8.size());
+			bitstreamList.append(bitNameUTF8);
+		}
+
+		writeMessage(m_client, MSG_ID_HELLO, bitstreamList);
 
 		connect(m_client, &QTcpSocket::readyRead, this, &MeasurementServer::onReadyRead);
 		connect(m_client, &QTcpSocket::stateChanged, this, &MeasurementServer::onNetworkStateChanged);
