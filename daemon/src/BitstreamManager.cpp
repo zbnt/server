@@ -272,3 +272,92 @@ bool loadDeviceTree(const QString &dtboName, const QByteArray &dtboContents)
 	dtboDst.write(dtboContents);
 	return true;
 }
+
+uint32_t enumerateDevices(const QString &bitstreamName, QByteArray &output)
+{
+	// Read dtbo file
+
+	QString dtboPath = ZBNT_FIRMWARE_PATH "/" + g_daemonCfg.deviceName + "/" + bitstreamName + ".dtbo";
+	QFile dtboFile(dtboPath);
+
+	if(!dtboFile.open(QIODevice::ReadOnly))
+	{
+		qFatal("[bitmgr] F: Failed to open file: %s", qUtf8Printable(dtboPath));
+		return false;
+	}
+
+	QByteArray dtboContents = dtboFile.readAll();
+	const void *fdt = dtboContents.constData();
+
+	// Enumerate devices
+
+	uint32_t count = 0;
+
+	fdtEnumerateDevices(fdt, 0,
+		[&](const QByteArray &name, int offset)
+		{
+			if(name.startsWith("zbnt_fd@"))
+			{
+				uint8_t portA, portB;
+
+				if(!fdtGetArrayProp(fdt, offset, "zbnt,ports", portA, portB))
+				{
+					qCritical("[dev] E: Device %s doesn't have a valid zbnt,ports property.", name.constData());
+					return false;
+				}
+
+				appendAsBytes<uint8_t>(output, DEV_FRAME_DETECTOR);
+				appendAsBytes<uint8_t>(output, portA);
+				appendAsBytes<uint8_t>(output, portB);
+				++count;
+			}
+			else if(name.startsWith("zbnt_sc@"))
+			{
+				uint8_t port;
+
+				if(!fdtGetArrayProp(fdt, offset, "zbnt,ports", port))
+				{
+					qCritical("[dev] E: Device %s doesn't have a valid zbnt,ports property.", name.constData());
+					return false;
+				}
+
+				appendAsBytes<uint8_t>(output, DEV_STATS_COLLECTOR);
+				appendAsBytes<uint8_t>(output, port);
+				++count;
+			}
+			else if(name.startsWith("zbnt_lm@"))
+			{
+				uint8_t portA, portB;
+
+				if(!fdtGetArrayProp(fdt, offset, "zbnt,ports", portA, portB))
+				{
+					qCritical("[dev] E: Device %s doesn't have a valid zbnt,ports property.", name.constData());
+					return false;
+				}
+
+				appendAsBytes<uint8_t>(output, DEV_LATENCY_MEASURER);
+				appendAsBytes<uint8_t>(output, portA);
+				appendAsBytes<uint8_t>(output, portB);
+				++count;
+			}
+			else if(name.startsWith("zbnt_tg@"))
+			{
+				uint8_t port;
+
+				if(!fdtGetArrayProp(fdt, offset, "zbnt,ports", port))
+				{
+					qCritical("[dev] E: Device %s doesn't have a valid zbnt,ports property.", name.constData());
+					return false;
+				}
+
+				appendAsBytes<uint8_t>(output, DEV_TRAFFIC_GENERATOR);
+				appendAsBytes<uint8_t>(output, port);
+				++count;
+			}
+
+			return true;
+		}
+	);
+
+	return count;
+}

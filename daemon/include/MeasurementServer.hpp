@@ -31,7 +31,8 @@ public:
 	MeasurementServer(QObject *parent = nullptr);
 	~MeasurementServer();
 
-	void flushDmaNetBuffer();
+	void flushDmaBuffer();
+	void onHelloTimeout();
 	void onMessageReceived(quint16 id, const QByteArray &data);
 
 	void onIncomingConnection();
@@ -39,9 +40,12 @@ public:
 	void onNetworkStateChanged(QAbstractSocket::SocketState state);
 
 private:
+	QTimer *m_dmaTimer = nullptr;
 	QByteArray m_pendingDmaData;
 
-	QTimer *m_timer = nullptr;
+	QTimer *m_helloTimer = nullptr;
+	bool m_helloReceived = false;
+
 	QTcpServer *m_server = nullptr;
 	QTcpSocket *m_client = nullptr;
 };

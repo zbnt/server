@@ -38,3 +38,4 @@ extern QVector<AbstractDevice*> g_deviceList;
 void initBitstreamManager();
 bool loadBitstream(const QString &bitstreamName);
 bool loadDeviceTree(const QString &dtboName, const QByteArray &dtboContents);
+uint32_t enumerateDevices(const QString &bitstreamName, QByteArray &output);

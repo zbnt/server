@@ -18,8 +18,9 @@
 
 #pragma once
 
-#define MSG_DISCOVERY_PORT   5466
 #define MSG_MAGIC_IDENTIFIER "\xFFZB\x02"
+#define MSG_DISCOVERY_PORT   5466
+#define MSG_HELLO_TIMEOUT    3000
 
 enum MessageID
 {

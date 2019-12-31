@@ -29,12 +29,16 @@ MeasurementServer *g_measurementSrv = nullptr;
 MeasurementServer::MeasurementServer(QObject *parent)
 	: QObject(parent)
 {
-	m_timer = new QTimer(this);
 	m_server = new QTcpServer(this);
+	m_dmaTimer = new QTimer(this);
+	m_helloTimer = new QTimer(this);
 
-	m_timer->setInterval(0);
-	m_timer->setSingleShot(false);
-	m_timer->start();
+	m_dmaTimer->setInterval(0);
+	m_dmaTimer->setSingleShot(false);
+	m_dmaTimer->start();
+
+	m_helloTimer->setInterval(MSG_HELLO_TIMEOUT);
+	m_helloTimer->setSingleShot(true);
 
 	if(!m_server->listen(QHostAddress::Any, g_daemonCfg.port))
 		qFatal("[net] F: Can't listen on TCP port");
@@ -43,14 +47,15 @@ MeasurementServer::MeasurementServer(QObject *parent)
 
 	qInfo("[net] I: Listening on TCP port %d", g_daemonCfg.port);
 
-	connect(m_timer, &QTimer::timeout, this, &MeasurementServer::flushDmaNetBuffer);
+	connect(m_dmaTimer, &QTimer::timeout, this, &MeasurementServer::flushDmaBuffer);
+	connect(m_helloTimer, &QTimer::timeout, this, &MeasurementServer::onHelloTimeout);
 	connect(m_server, &QTcpServer::newConnection, this, &MeasurementServer::onIncomingConnection);
 }
 
 MeasurementServer::~MeasurementServer()
 { }
 
-void MeasurementServer::flushDmaNetBuffer()
+void MeasurementServer::flushDmaBuffer()
 {
 	if(g_axiDma->waitForInterrupt(0))
 	{
@@ -75,18 +80,50 @@ void MeasurementServer::flushDmaNetBuffer()
 	}
 }
 
+void MeasurementServer::onHelloTimeout()
+{
+	if(m_client && !m_helloReceived)
+	{
+		qInfo("[net] I: Client timeout, HELLO message not received");
+		m_client->abort();
+	}
+}
+
 void MeasurementServer::onMessageReceived(quint16 id, const QByteArray &data)
 {
 	switch(id)
 	{
 		case MSG_ID_HELLO:
 		{
-			// TODO
+			if(m_helloReceived) break;
+
+			QByteArray bitstreamList;
+			appendAsBytes<uint16_t>(bitstreamList, g_bitstreamList.size());
+
+			for(const QString &bitName : g_bitstreamList)
+			{
+				const QByteArray bitNameUTF8 = bitName.toUtf8();
+
+				appendAsBytes<uint16_t>(bitstreamList, bitNameUTF8.size());
+				bitstreamList.append(bitNameUTF8);
+
+				QByteArray deviceList;
+				uint32_t deviceCount = enumerateDevices(bitName, deviceList);
+
+				appendAsBytes<uint16_t>(bitstreamList, deviceCount);
+				bitstreamList.append(deviceList);
+			}
+
+			m_helloReceived = true;
+			m_helloTimer->stop();
+
+			writeMessage(m_client, MSG_ID_HELLO, bitstreamList);
 			break;
 		}
 
 		case MSG_ID_PROGRAM_PL:
 		{
+			if(!m_helloReceived) break;
 			if(!data.length()) break;
 
 			QString bitstreamName(data);
@@ -101,6 +138,7 @@ void MeasurementServer::onMessageReceived(quint16 id, const QByteArray &data)
 
 		case MSG_ID_SET_PROPERTY:
 		{
+			if(!m_helloReceived) break;
 			if(data.length() < 3) break;
 
 			uint8_t devID = data[0];
@@ -121,7 +159,28 @@ void MeasurementServer::onMessageReceived(quint16 id, const QByteArray &data)
 
 		case MSG_ID_GET_PROPERTY:
 		{
-			// TODO
+			if(!m_helloReceived) break;
+			if(data.length() < 3) break;
+
+			uint8_t devID = data[0];
+			PropertyID propID = PropertyID(readAsNumber<uint16_t>(data, 1));
+			QByteArray value;
+			bool ok = false;
+
+			if(devID < g_deviceList.length())
+			{
+				ok = g_deviceList[devID]->getProperty(propID, value);
+			}
+			else if(devID == 0xFF)
+			{
+				ok = g_axiTimer->getProperty(propID, value);
+			}
+
+			QByteArray response;
+			appendAsBytes<uint8_t>(response, ok);
+			response.append(value);
+
+			writeAsBytes(m_client, response);
 			break;
 		}
 
@@ -142,19 +201,7 @@ void MeasurementServer::onIncomingConnection()
 		m_client->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
 
 		qInfo("[net] I: Incoming connection: %s", qUtf8Printable(m_client->peerAddress().toString()));
-
-		QByteArray bitstreamList;
-		appendAsBytes<uint16_t>(bitstreamList, g_bitstreamList.size());
-
-		for(const QString &bitName : g_bitstreamList)
-		{
-			const QByteArray bitNameUTF8 = bitName.toUtf8();
-
-			appendAsBytes<uint16_t>(bitstreamList, bitNameUTF8.size());
-			bitstreamList.append(bitNameUTF8);
-		}
-
-		writeMessage(m_client, MSG_ID_HELLO, bitstreamList);
+		m_helloTimer->start();
 
 		connect(m_client, &QTcpSocket::readyRead, this, &MeasurementServer::onReadyRead);
 		connect(m_client, &QTcpSocket::stateChanged, this, &MeasurementServer::onNetworkStateChanged);
@@ -176,6 +223,9 @@ void MeasurementServer::onNetworkStateChanged(QAbstractSocket::SocketState state
 	if(state == QAbstractSocket::UnconnectedState)
 	{
 		qInfo("[net] I: Client disconnected");
+
+		m_helloReceived = false;
+		m_helloTimer->stop();
 
 		m_client->deleteLater();
 		m_client = nullptr;
