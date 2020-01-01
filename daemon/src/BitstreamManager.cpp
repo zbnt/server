@@ -307,8 +307,7 @@ uint32_t enumerateDevices(const QString &bitstreamName, QByteArray &output)
 				}
 
 				appendAsBytes<uint8_t>(output, DEV_FRAME_DETECTOR);
-				appendAsBytes<uint8_t>(output, portA);
-				appendAsBytes<uint8_t>(output, portB);
+				appendAsBytes<uint32_t>(output, (portB << 8) | portA);
 				++count;
 			}
 			else if(name.startsWith("zbnt_sc@"))
@@ -322,7 +321,7 @@ uint32_t enumerateDevices(const QString &bitstreamName, QByteArray &output)
 				}
 
 				appendAsBytes<uint8_t>(output, DEV_STATS_COLLECTOR);
-				appendAsBytes<uint8_t>(output, port);
+				appendAsBytes<uint32_t>(output, port);
 				++count;
 			}
 			else if(name.startsWith("zbnt_lm@"))
@@ -336,8 +335,7 @@ uint32_t enumerateDevices(const QString &bitstreamName, QByteArray &output)
 				}
 
 				appendAsBytes<uint8_t>(output, DEV_LATENCY_MEASURER);
-				appendAsBytes<uint8_t>(output, portA);
-				appendAsBytes<uint8_t>(output, portB);
+				appendAsBytes<uint32_t>(output, (portB << 8) | portA);
 				++count;
 			}
 			else if(name.startsWith("zbnt_tg@"))
@@ -351,7 +349,7 @@ uint32_t enumerateDevices(const QString &bitstreamName, QByteArray &output)
 				}
 
 				appendAsBytes<uint8_t>(output, DEV_TRAFFIC_GENERATOR);
-				appendAsBytes<uint8_t>(output, port);
+				appendAsBytes<uint32_t>(output, port);
 				++count;
 			}
 
