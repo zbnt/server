@@ -123,7 +123,14 @@ bool SimpleTimer::setProperty(PropertyID propID, const QByteArray &value)
 		{
 			if(value.length() < 1) return false;
 
-			m_regs->config = (m_regs->config & ~CFG_ENABLE) | (readAsNumber<uint8_t>(value, 0) & CFG_ENABLE);
+			uint8_t enable = readAsNumber<uint8_t>(value, 0);
+			m_regs->config = (m_regs->config & ~CFG_ENABLE) | (enable & CFG_ENABLE);
+
+			if(!enable)
+			{
+				m_regs->current_time = 0;
+			}
+
 			break;
 		}
 
