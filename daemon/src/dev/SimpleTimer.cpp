@@ -93,6 +93,8 @@ bool SimpleTimer::loadDevice(const void *fdt, int offset)
 		return false;
 	}
 
+	m_regs->max_time = 125'000'000;
+
 	close(fd);
 	return true;
 }

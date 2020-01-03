@@ -116,8 +116,12 @@ void MeasurementServer::onMessageReceived(quint16 id, const QByteArray &data)
 
 			m_helloReceived = true;
 			m_helloTimer->stop();
-
 			writeMessage(m_client, MSG_ID_HELLO, bitstreamList);
+
+			QByteArray message;
+			appendAsBytes<uint8_t>(message, 1);
+			message.append(g_activeBitstream.toUtf8());
+			writeMessage(m_client, MSG_ID_PROGRAM_PL, message);
 			break;
 		}
 
@@ -126,13 +130,23 @@ void MeasurementServer::onMessageReceived(quint16 id, const QByteArray &data)
 			if(!m_helloReceived) break;
 			if(!data.length()) break;
 
-			QString bitstreamName(data);
+			QString bitstreamName = QString::fromUtf8(data);
+			QByteArray response;
 
 			if(std::find(g_bitstreamList.cbegin(), g_bitstreamList.cend(), bitstreamName) != g_bitstreamList.cend())
 			{
 				loadBitstream(bitstreamName);
+				appendAsBytes<uint8_t>(response, 1);
+				response.append(data);
+			}
+			else
+			{
+				QByteArray response;
+				appendAsBytes<uint8_t>(response, 0);
+				response.append(g_activeBitstream.toUtf8());
 			}
 
+			writeMessage(m_client, MSG_ID_PROGRAM_PL, response);
 			break;
 		}
 
@@ -144,16 +158,24 @@ void MeasurementServer::onMessageReceived(quint16 id, const QByteArray &data)
 			uint8_t devID = data[0];
 			PropertyID propID = PropertyID(readAsNumber<uint16_t>(data, 1));
 			QByteArray value = data.mid(3);
+			bool ok = false;
 
 			if(devID < g_deviceList.length())
 			{
-				g_deviceList[devID]->setProperty(propID, value);
+				ok = g_deviceList[devID]->setProperty(propID, value);
 			}
 			else if(devID == 0xFF)
 			{
-				g_axiTimer->setProperty(propID, value);
+				ok = g_axiTimer->setProperty(propID, value);
 			}
 
+			QByteArray response;
+			appendAsBytes<uint8_t>(response, devID);
+			appendAsBytes<uint16_t>(response, propID);
+			appendAsBytes<uint8_t>(response, ok);
+			response.append(value);
+
+			writeMessage(m_client, MSG_ID_SET_PROPERTY, response);
 			break;
 		}
 
@@ -177,10 +199,12 @@ void MeasurementServer::onMessageReceived(quint16 id, const QByteArray &data)
 			}
 
 			QByteArray response;
+			appendAsBytes<uint8_t>(response, devID);
+			appendAsBytes<uint16_t>(response, propID);
 			appendAsBytes<uint8_t>(response, ok);
 			response.append(value);
 
-			writeAsBytes(m_client, response);
+			writeMessage(m_client, MSG_ID_GET_PROPERTY, response);
 			break;
 		}
 

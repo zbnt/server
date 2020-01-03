@@ -27,6 +27,7 @@
 #include <dev/DmaBuffer.hpp>
 #include <dev/SimpleTimer.hpp>
 
+extern QString g_activeBitstream;
 extern QVector<QString> g_bitstreamList;
 extern QHash<QByteArray, QByteArray> g_uioMap;
 

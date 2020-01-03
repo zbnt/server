@@ -38,6 +38,7 @@
 #include <dev/LatencyMeasurer.hpp>
 #include <dev/TrafficGenerator.hpp>
 
+QString g_activeBitstream;
 QVector<QString> g_bitstreamList;
 QHash<QByteArray, QByteArray> g_uioMap;
 
@@ -154,6 +155,8 @@ bool loadBitstream(const QString &bitstreamName)
 	}
 
 	// Enumerate devices
+
+	g_activeBitstream = bitstreamName;
 
 	return fdtEnumerateDevices(fdt, 0,
 		[&](const QByteArray &name, int offset)
