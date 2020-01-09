@@ -104,6 +104,11 @@ bool TrafficGenerator::loadDevice(const void *fdt, int offset)
 		return false;
 	}
 
+	m_regs->fsize = 60;
+	m_regs->fdelay = 12;
+	m_regs->burst_time_on = 100;
+	m_regs->burst_time_off = 100;
+
 	close(fd);
 	return true;
 }

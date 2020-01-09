@@ -28,6 +28,7 @@
 #define FD_PATTERN_B_FLAGS_OFFSET 0x8000
 #define FD_MEM_SIZE               8192
 #define FD_NUM_PATTERNS           4
+#define FD_PATTERN_SIZE           (FD_MEM_SIZE/FD_NUM_PATTERNS)
 
 class FrameDetector : public AbstractDevice
 {

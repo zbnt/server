@@ -104,6 +104,12 @@ bool LatencyMeasurer::loadDevice(const void *fdt, int offset)
 		return false;
 	}
 
+	m_regs->config = 0;
+	m_regs->padding = 18;
+	m_regs->timeout = 125000000;
+	m_regs->delay = 12500000;
+	m_regs->log_identifier = m_idx | MSG_ID_MEASUREMENT;
+
 	close(fd);
 	return true;
 }

@@ -104,6 +104,8 @@ bool StatsCollector::loadDevice(const void *fdt, int offset)
 		return false;
 	}
 
+	m_regs->config = 0;
+	m_regs->sample_period = 12500000;
 	m_regs->log_identifier = m_idx | MSG_ID_MEASUREMENT;
 
 	close(fd);
