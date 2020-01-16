@@ -46,6 +46,8 @@ public:
 	bool isReady() const;
 	bool loadDevice(const void *fdt, int offset);
 
+	void setMaximumTime(uint64_t time);
+
 	void setReset(bool reset);
 	bool setProperty(PropertyID propID, const QByteArray &value);
 	bool getProperty(PropertyID propID, QByteArray &value);

@@ -37,6 +37,7 @@ public:
 	static constexpr uint32_t IRQ_MEM_END    = 1;
 	static constexpr uint32_t IRQ_TIMEOUT    = 2;
 	static constexpr uint32_t IRQ_AXI_ERROR  = 4;
+	static constexpr uint32_t IRQ_ALL        = IRQ_MEM_END | IRQ_TIMEOUT | IRQ_AXI_ERROR;
 
 	struct Registers
 	{

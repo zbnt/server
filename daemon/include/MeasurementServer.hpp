@@ -52,6 +52,7 @@ private:
 	bool m_helloReceived = false;
 
 	QTimer *m_runEndTimer = nullptr;
+	bool m_isRunning = false;
 
 	QTcpServer *m_server = nullptr;
 	QTcpSocket *m_client = nullptr;

@@ -99,6 +99,11 @@ bool SimpleTimer::loadDevice(const void *fdt, int offset)
 	return true;
 }
 
+void SimpleTimer::setMaximumTime(uint64_t time)
+{
+	m_regs->max_time = time;
+}
+
 void SimpleTimer::setReset(bool reset)
 {
 	if(!isReady()) return;

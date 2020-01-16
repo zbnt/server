@@ -18,6 +18,7 @@
 
 #include <MeasurementServer.hpp>
 
+#include <QThread>
 #include <QNetworkInterface>
 
 #include <Utils.hpp>
@@ -63,18 +64,52 @@ MeasurementServer::~MeasurementServer()
 
 void MeasurementServer::startRun()
 {
+	if(m_isRunning) return;
+
+	m_lastDmaIdx = 0;
+	m_pendingDmaData.clear();
 	g_axiDma->startTransfer();
-	g_axiTimer->setProperty(PROP_ENABLE, QByteArray(1, '\1'));
+
+	if(m_client)
+	{
+		writeMessage(m_client, MSG_ID_RUN_START, QByteArray());
+	}
+
+	m_isRunning = true;
+	qInfo("[net] I: Run started");
 }
 
 void MeasurementServer::stopRun()
 {
-	m_lastDmaIdx = 0;
-	m_pendingDmaData.clear();
+	if(!m_isRunning) return;
+
+	// Flush data still remaining in the FIFOs and stop DMA
+
+	g_axiDma->flushFifo();
+
+	while(!g_axiDma->isFifoEmpty())
+	{
+		QThread::usleep(100);
+	}
 
 	g_axiDma->stopTransfer();
-	g_axiDma->setReset(true);
+
+	if(g_axiDma->waitForInterrupt(0))
+	{
+		g_axiDma->clearInterrupts(g_axiDma->getActiveInterrupts());
+	}
+
+	// Reset the AXI timer
+
+	uint64_t maxTime = g_axiTimer->getMaximumTime();
+
 	g_axiTimer->setReset(true);
+	QThread::msleep(100);
+	g_axiTimer->setReset(false);
+
+	g_axiTimer->setMaximumTime(maxTime);
+
+	// Notify client, if available
 
 	if(m_client)
 	{
@@ -94,8 +129,11 @@ void MeasurementServer::stopRun()
 			}
 		}
 
-		writeMessage(m_client, MSG_ID_TIME_OVER, QByteArray());
+		writeMessage(m_client, MSG_ID_RUN_STOP, QByteArray());
 	}
+
+	m_isRunning = false;
+	qInfo("[net] I: Run stopped");
 }
 
 void MeasurementServer::pollAxiTimer()
@@ -106,6 +144,7 @@ void MeasurementServer::pollAxiTimer()
 		{
 			if(g_axiDma->isFifoEmpty())
 			{
+				qDebug("[net] I: Time limit reached");
 				stopRun();
 			}
 			else
@@ -218,6 +257,22 @@ void MeasurementServer::onMessageReceived(quint16 id, const QByteArray &data)
 			break;
 		}
 
+		case MSG_ID_RUN_START:
+		{
+			if(!m_helloReceived) break;
+
+			startRun();
+			break;
+		}
+
+		case MSG_ID_RUN_STOP:
+		{
+			if(!m_helloReceived) break;
+
+			stopRun();
+			break;
+		}
+
 		case MSG_ID_SET_PROPERTY:
 		{
 			if(!m_helloReceived) break;
@@ -234,27 +289,7 @@ void MeasurementServer::onMessageReceived(quint16 id, const QByteArray &data)
 			}
 			else if(devID == 0xFF)
 			{
-				if(propID == PROP_ENABLE)
-				{
-					if(value.length() >= 1)
-					{
-						if(value[0])
-						{
-							startRun();
-						}
-						else
-						{
-							stopRun();
-							break;
-						}
-
-						ok = true;
-					}
-				}
-				else
-				{
-					ok = g_axiTimer->setProperty(propID, value);
-				}
+				ok = g_axiTimer->setProperty(propID, value);
 			}
 
 			QByteArray response;
@@ -341,5 +376,7 @@ void MeasurementServer::onNetworkStateChanged(QAbstractSocket::SocketState state
 
 		m_client->deleteLater();
 		m_client = nullptr;
+
+		stopRun();
 	}
 }
