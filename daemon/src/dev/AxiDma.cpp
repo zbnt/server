@@ -128,26 +128,40 @@ bool AxiDma::waitForInterrupt(int timeout)
 	return false;
 }
 
-void AxiDma::clearInterrupts()
+void AxiDma::clearInterrupts(uint16_t irq)
 {
-	m_regs->config = 0;
-
-	m_regs->irq = 1;
+	m_regs->irq = irq;
 	write(m_fd, &m_irq, sizeof(uint32_t));
-
-	m_regs->config = 1;
 }
 
 void AxiDma::startTransfer()
 {
 	m_regs->mem_base = g_dmaBuffer->getPhysAddr();
 	m_regs->mem_size = g_dmaBuffer->getMemSize();
-	m_regs->config = 1;
+	m_regs->irq_enable = IRQ_MEM_END | IRQ_TIMEOUT | IRQ_AXI_ERROR;
+	m_regs->config = CFG_ENABLE;
+}
+
+void AxiDma::stopTransfer()
+{
+	m_regs->config &= ~CFG_ENABLE;
+}
+
+void AxiDma::flushFifo()
+{
+	m_regs->config |= CFG_FLUSH_FIFO;
 }
 
 void AxiDma::setReset(bool reset)
 {
-	Q_UNUSED(reset);
+	if(reset)
+	{
+		m_regs->config |= CFG_RESET;
+	}
+	else
+	{
+		m_regs->config &= ~CFG_RESET;
+	}
 }
 
 bool AxiDma::setProperty(PropertyID propID, const QByteArray &value)
@@ -164,7 +178,22 @@ bool AxiDma::getProperty(PropertyID propID, QByteArray &value)
 	return false;
 }
 
-uint32_t AxiDma::getLastMessageEnd()
+uint16_t AxiDma::getActiveInterrupts() const
+{
+	return m_regs->irq;
+}
+
+uint32_t AxiDma::getLastMessageEnd() const
 {
 	return m_regs->last_msg_end;
+}
+
+uint32_t AxiDma::getBytesWritten() const
+{
+	return m_regs->bytes_written;
+}
+
+bool AxiDma::isFifoEmpty() const
+{
+	return !!(m_regs->status & ST_FIFO_EMPTY);
 }

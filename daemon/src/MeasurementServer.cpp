@@ -32,6 +32,7 @@ MeasurementServer::MeasurementServer(QObject *parent)
 	m_server = new QTcpServer(this);
 	m_dmaTimer = new QTimer(this);
 	m_helloTimer = new QTimer(this);
+	m_runEndTimer = new QTimer(this);
 
 	m_dmaTimer->setInterval(0);
 	m_dmaTimer->setSingleShot(false);
@@ -39,6 +40,10 @@ MeasurementServer::MeasurementServer(QObject *parent)
 
 	m_helloTimer->setInterval(MSG_HELLO_TIMEOUT);
 	m_helloTimer->setSingleShot(true);
+
+	m_runEndTimer->setInterval(1000);
+	m_runEndTimer->setSingleShot(false);
+	m_runEndTimer->start();
 
 	if(!m_server->listen(QHostAddress::Any, g_daemonCfg.port))
 		qFatal("[net] F: Can't listen on TCP port");
@@ -49,11 +54,57 @@ MeasurementServer::MeasurementServer(QObject *parent)
 
 	connect(m_dmaTimer, &QTimer::timeout, this, &MeasurementServer::flushDmaBuffer);
 	connect(m_helloTimer, &QTimer::timeout, this, &MeasurementServer::onHelloTimeout);
+	connect(m_runEndTimer, &QTimer::timeout, this, &MeasurementServer::pollAxiTimer);
 	connect(m_server, &QTcpServer::newConnection, this, &MeasurementServer::onIncomingConnection);
 }
 
 MeasurementServer::~MeasurementServer()
 { }
+
+void MeasurementServer::stopRun()
+{
+	g_axiDma->stopTransfer();
+	g_axiTimer->setReset(true);
+
+	if(m_client)
+	{
+		for(AbstractDevice *dev : g_deviceList)
+		{
+			QByteArray value;
+
+			if(dev->getProperty(PROP_OVERFLOW_COUNT, value))
+			{
+				QByteArray response;
+				appendAsBytes<uint8_t>(response, dev->getIndex());
+				appendAsBytes<uint16_t>(response, PROP_OVERFLOW_COUNT);
+				appendAsBytes<uint8_t>(response, true);
+				response.append(value);
+
+				writeMessage(m_client, MSG_ID_GET_PROPERTY, response);
+			}
+		}
+
+		writeMessage(m_client, MSG_ID_TIME_OVER, QByteArray());
+	}
+}
+
+void MeasurementServer::pollAxiTimer()
+{
+	if(g_axiTimer && g_axiDma)
+	{
+		if(g_axiTimer->getCurrentTime() >= g_axiTimer->getMaximumTime())
+		{
+			if(g_axiDma->isFifoEmpty())
+			{
+				stopRun();
+			}
+			else
+			{
+				g_axiDma->flushFifo();
+			}
+		}
+	}
+}
 
 void MeasurementServer::flushDmaBuffer()
 {
@@ -62,21 +113,28 @@ void MeasurementServer::flushDmaBuffer()
 		const char *buffer = g_dmaBuffer->getVirtAddr();
 		uint32_t bufferSize = g_dmaBuffer->getMemSize();
 		uint32_t msgEnd = g_axiDma->getLastMessageEnd();
+		uint16_t irq = g_axiDma->getActiveInterrupts();
 
 		if(m_client)
 		{
 			m_client->write(m_pendingDmaData);
-			m_client->write(buffer, msgEnd);
+			m_client->write(buffer + m_lastDmaIdx, msgEnd - m_lastDmaIdx);
 		}
 
 		m_pendingDmaData.clear();
+		m_lastDmaIdx = msgEnd;
 
-		if(msgEnd != bufferSize)
+		if(irq & AxiDma::IRQ_MEM_END)
 		{
-			m_pendingDmaData.append(buffer + msgEnd, bufferSize - msgEnd);
+			m_lastDmaIdx = 0;
+
+			if(msgEnd != bufferSize)
+			{
+				m_pendingDmaData.append(buffer + msgEnd, bufferSize - msgEnd);
+			}
 		}
 
-		g_axiDma->clearInterrupts();
+		g_axiDma->clearInterrupts(irq);
 	}
 }
 
@@ -176,6 +234,12 @@ void MeasurementServer::onMessageReceived(quint16 id, const QByteArray &data)
 			response.append(value);
 
 			writeMessage(m_client, MSG_ID_SET_PROPERTY, response);
+
+			if(devID == 0xFF && propID == PROP_ENABLE && value == QByteArray(1, '\1'))
+			{
+				stopRun();
+			}
+
 			break;
 		}
 

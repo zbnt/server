@@ -25,11 +25,25 @@
 class AxiDma : public AbstractDevice
 {
 public:
+	static constexpr uint32_t CFG_ENABLE     = 1;
+	static constexpr uint32_t CFG_RESET      = 2;
+	static constexpr uint32_t CFG_FLUSH_FIFO = 4;
+
+	static constexpr uint32_t ST_OKAY        = 1;
+	static constexpr uint32_t ST_ERROR_SLV   = 2;
+	static constexpr uint32_t ST_ERROR_DEC   = 4;
+	static constexpr uint32_t ST_FIFO_EMPTY  = 8;
+
+	static constexpr uint32_t IRQ_MEM_END    = 1;
+	static constexpr uint32_t IRQ_TIMEOUT    = 2;
+	static constexpr uint32_t IRQ_AXI_ERROR  = 4;
+
 	struct Registers
 	{
 		uint16_t config;
 		uint16_t status;
-		uint32_t irq;
+		uint16_t irq;
+		uint16_t irq_enable;
 		uint64_t mem_base;
 		uint32_t mem_size;
 		uint32_t bytes_written;
@@ -46,13 +60,18 @@ public:
 	bool loadDevice(const void *fdt, int offset);
 
 	bool waitForInterrupt(int timeout);
-	void clearInterrupts();
+	void clearInterrupts(uint16_t irq);
 	void startTransfer();
+	void stopTransfer();
+	void flushFifo();
 
 	void setReset(bool reset);
 	bool setProperty(PropertyID propID, const QByteArray &value);
 	bool getProperty(PropertyID propID, QByteArray &value);
-	uint32_t getLastMessageEnd();
+	uint16_t getActiveInterrupts() const;
+	uint32_t getLastMessageEnd() const;
+	uint32_t getBytesWritten() const;
+	bool isFifoEmpty() const;
 
 private:
 	volatile Registers *m_regs;

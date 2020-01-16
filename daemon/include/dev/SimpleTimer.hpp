@@ -49,6 +49,8 @@ public:
 	void setReset(bool reset);
 	bool setProperty(PropertyID propID, const QByteArray &value);
 	bool getProperty(PropertyID propID, QByteArray &value);
+	uint64_t getCurrentTime() const;
+	uint64_t getMaximumTime() const;
 
 private:
 	volatile Registers *m_regs;

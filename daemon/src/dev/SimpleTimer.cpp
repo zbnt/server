@@ -201,3 +201,13 @@ bool SimpleTimer::getProperty(PropertyID propID, QByteArray &value)
 
 	return true;
 }
+
+uint64_t SimpleTimer::getCurrentTime() const
+{
+	return m_regs->current_time;
+}
+
+uint64_t SimpleTimer::getMaximumTime() const
+{
+	return m_regs->max_time;
+}
