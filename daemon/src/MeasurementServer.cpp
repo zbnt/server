@@ -61,9 +61,19 @@ MeasurementServer::MeasurementServer(QObject *parent)
 MeasurementServer::~MeasurementServer()
 { }
 
+void MeasurementServer::startRun()
+{
+	g_axiDma->startTransfer();
+	g_axiTimer->setProperty(PROP_ENABLE, QByteArray(1, '\1'));
+}
+
 void MeasurementServer::stopRun()
 {
+	m_lastDmaIdx = 0;
+	m_pendingDmaData.clear();
+
 	g_axiDma->stopTransfer();
+	g_axiDma->setReset(true);
 	g_axiTimer->setReset(true);
 
 	if(m_client)
@@ -224,7 +234,27 @@ void MeasurementServer::onMessageReceived(quint16 id, const QByteArray &data)
 			}
 			else if(devID == 0xFF)
 			{
-				ok = g_axiTimer->setProperty(propID, value);
+				if(propID == PROP_ENABLE)
+				{
+					if(value.length() >= 1)
+					{
+						if(value[0])
+						{
+							startRun();
+						}
+						else
+						{
+							stopRun();
+							break;
+						}
+
+						ok = true;
+					}
+				}
+				else
+				{
+					ok = g_axiTimer->setProperty(propID, value);
+				}
 			}
 
 			QByteArray response;
@@ -234,12 +264,6 @@ void MeasurementServer::onMessageReceived(quint16 id, const QByteArray &data)
 			response.append(value);
 
 			writeMessage(m_client, MSG_ID_SET_PROPERTY, response);
-
-			if(devID == 0xFF && propID == PROP_ENABLE && value == QByteArray(1, '\1'))
-			{
-				stopRun();
-			}
-
 			break;
 		}
 

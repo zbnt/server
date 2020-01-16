@@ -74,7 +74,8 @@ namespace Messages
 
 		PROP_OVERFLOW_COUNT,
 		PROP_SAMPLE_PERIOD,
-		PROP_LFSR_SEED
+		PROP_LFSR_SEED,
+		PROP_RESET
 	};
 
 	enum RxStatus

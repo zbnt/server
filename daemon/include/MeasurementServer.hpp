@@ -31,7 +31,9 @@ public:
 	MeasurementServer(QObject *parent = nullptr);
 	~MeasurementServer();
 
+	void startRun();
 	void stopRun();
+
 	void pollAxiTimer();
 	void flushDmaBuffer();
 	void onHelloTimeout();

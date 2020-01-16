@@ -109,7 +109,6 @@ bool AxiDma::loadDevice(const void *fdt, int offset)
 		return false;
 	}
 
-	startTransfer();
 	return true;
 }
 
