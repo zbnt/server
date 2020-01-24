@@ -29,7 +29,7 @@ public:
 	static constexpr uint32_t CFG_RESET      = 2;
 	static constexpr uint32_t CFG_FLUSH_FIFO = 4;
 
-	static constexpr uint32_t ST_OKAY        = 1;
+	static constexpr uint32_t ST_BUSY        = 1;
 	static constexpr uint32_t ST_ERROR_SLV   = 2;
 	static constexpr uint32_t ST_ERROR_DEC   = 4;
 	static constexpr uint32_t ST_FIFO_EMPTY  = 8;
