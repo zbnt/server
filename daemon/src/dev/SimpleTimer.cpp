@@ -99,6 +99,11 @@ bool SimpleTimer::loadDevice(const void *fdt, int offset)
 	return true;
 }
 
+void SimpleTimer::setRunning(bool running)
+{
+	m_regs->config = (m_regs->config & ~CFG_ENABLE) | (running & CFG_ENABLE);
+}
+
 void SimpleTimer::setMaximumTime(uint64_t time)
 {
 	m_regs->max_time = time;

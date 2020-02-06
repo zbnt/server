@@ -83,6 +83,8 @@ void MeasurementServer::stopRun()
 {
 	if(!m_isRunning) return;
 
+	g_axiTimer->setRunning(false);
+
 	// Flush data still remaining in the FIFOs and stop DMA
 
 	g_axiDma->flushFifo();

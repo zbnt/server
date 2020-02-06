@@ -46,6 +46,7 @@ public:
 	bool isReady() const;
 	bool loadDevice(const void *fdt, int offset);
 
+	void setRunning(bool running);
 	void setMaximumTime(uint64_t time);
 
 	void setReset(bool reset);
