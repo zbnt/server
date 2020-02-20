@@ -55,6 +55,8 @@ public:
 	AxiDma(const QByteArray &name);
 	~AxiDma();
 
+	void announce(QByteArray &output) const;
+
 	DeviceType getType() const;
 
 	bool isReady() const;
@@ -68,7 +70,7 @@ public:
 
 	void setReset(bool reset);
 	bool setProperty(PropertyID propID, const QByteArray &value);
-	bool getProperty(PropertyID propID, QByteArray &value);
+	bool getProperty(PropertyID propID, const QByteArray &params, QByteArray &value);
 	uint16_t getActiveInterrupts() const;
 	uint32_t getLastMessageEnd() const;
 	uint32_t getBytesWritten() const;

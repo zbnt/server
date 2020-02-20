@@ -119,7 +119,7 @@ void MeasurementServer::stopRun()
 		{
 			QByteArray value;
 
-			if(dev->getProperty(PROP_OVERFLOW_COUNT, value))
+			if(dev->getProperty(PROP_OVERFLOW_COUNT, QByteArray(), value))
 			{
 				QByteArray response;
 				appendAsBytes<uint8_t>(response, dev->getIndex());
@@ -215,12 +215,6 @@ void MeasurementServer::onMessageReceived(quint16 id, const QByteArray &data)
 
 				appendAsBytes<uint16_t>(bitstreamList, bitNameUTF8.size());
 				bitstreamList.append(bitNameUTF8);
-
-				QByteArray deviceList;
-				uint32_t deviceCount = enumerateDevices(bitName, deviceList);
-
-				appendAsBytes<uint16_t>(bitstreamList, deviceCount);
-				bitstreamList.append(deviceList);
 			}
 
 			m_helloReceived = true;
@@ -228,8 +222,17 @@ void MeasurementServer::onMessageReceived(quint16 id, const QByteArray &data)
 			writeMessage(m_client, MSG_ID_HELLO, bitstreamList);
 
 			QByteArray message;
+			QByteArray activeBitstream = g_activeBitstream.toUtf8();
+
 			appendAsBytes<uint8_t>(message, 1);
-			message.append(g_activeBitstream.toUtf8());
+			appendAsBytes<uint16_t>(message, activeBitstream.size());
+			message.append(activeBitstream);
+
+			for(const AbstractDevice *dev : g_deviceList)
+			{
+				dev->announce(message);
+			}
+
 			writeMessage(m_client, MSG_ID_PROGRAM_PL, message);
 			break;
 		}
@@ -237,22 +240,30 @@ void MeasurementServer::onMessageReceived(quint16 id, const QByteArray &data)
 		case MSG_ID_PROGRAM_PL:
 		{
 			if(!m_helloReceived) break;
-			if(!data.length()) break;
+			if(data.length() < 3) break;
 
-			QString bitstreamName = QString::fromUtf8(data);
+			uint16_t nameLength = readAsNumber<uint16_t>(data, 0);
+			QByteArray reqBitstream = data.mid(2, nameLength);
+			QString reqBitstreamName = QString::fromUtf8(reqBitstream);
 			QByteArray response;
 
-			if(std::find(g_bitstreamList.cbegin(), g_bitstreamList.cend(), bitstreamName) != g_bitstreamList.cend())
+			if(std::find(g_bitstreamList.cbegin(), g_bitstreamList.cend(), reqBitstreamName) != g_bitstreamList.cend())
 			{
-				loadBitstream(bitstreamName);
+				loadBitstream(reqBitstreamName);
 				appendAsBytes<uint8_t>(response, 1);
-				response.append(data);
 			}
 			else
 			{
-				QByteArray response;
+				reqBitstream = g_activeBitstream.toUtf8();
 				appendAsBytes<uint8_t>(response, 0);
-				response.append(g_activeBitstream.toUtf8());
+			}
+
+			appendAsBytes<uint16_t>(response, reqBitstream.size());
+			response.append(reqBitstream);
+
+			for(const AbstractDevice *dev : g_deviceList)
+			{
+				dev->announce(response);
 			}
 
 			writeMessage(m_client, MSG_ID_PROGRAM_PL, response);
@@ -311,22 +322,24 @@ void MeasurementServer::onMessageReceived(quint16 id, const QByteArray &data)
 
 			uint8_t devID = data[0];
 			PropertyID propID = PropertyID(readAsNumber<uint16_t>(data, 1));
+			QByteArray params = data.mid(3);
 			QByteArray value;
 			bool ok = false;
 
 			if(devID < g_deviceList.length())
 			{
-				ok = g_deviceList[devID]->getProperty(propID, value);
+				ok = g_deviceList[devID]->getProperty(propID, params, value);
 			}
 			else if(devID == 0xFF)
 			{
-				ok = g_axiTimer->getProperty(propID, value);
+				ok = g_axiTimer->getProperty(propID, params, value);
 			}
 
 			QByteArray response;
 			appendAsBytes<uint8_t>(response, devID);
 			appendAsBytes<uint16_t>(response, propID);
 			appendAsBytes<uint8_t>(response, ok);
+			response.append(params);
 			response.append(value);
 
 			writeMessage(m_client, MSG_ID_GET_PROPERTY, response);

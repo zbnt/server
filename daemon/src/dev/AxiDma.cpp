@@ -47,6 +47,11 @@ AxiDma::~AxiDma()
 	}
 }
 
+void AxiDma::announce(QByteArray &output) const
+{
+	Q_UNUSED(output);
+}
+
 DeviceType AxiDma::getType() const
 {
 	return DEV_AXI_DMA;
@@ -170,9 +175,10 @@ bool AxiDma::setProperty(PropertyID propID, const QByteArray &value)
 	return false;
 }
 
-bool AxiDma::getProperty(PropertyID propID, QByteArray &value)
+bool AxiDma::getProperty(PropertyID propID, const QByteArray &params, QByteArray &value)
 {
 	Q_UNUSED(propID);
+	Q_UNUSED(params);
 	Q_UNUSED(value);
 	return false;
 }

@@ -22,27 +22,28 @@
 
 #include <dev/AbstractDevice.hpp>
 
-#define FD_PATTERN_A_DATA_OFFSET  0x2000
-#define FD_PATTERN_A_FLAGS_OFFSET 0x4000
-#define FD_PATTERN_B_DATA_OFFSET  0x6000
-#define FD_PATTERN_B_FLAGS_OFFSET 0x8000
-#define FD_MEM_SIZE               8192
-#define FD_NUM_PATTERNS           4
-#define FD_PATTERN_SIZE           (FD_MEM_SIZE/FD_NUM_PATTERNS)
-
 class FrameDetector : public AbstractDevice
 {
 public:
-	static constexpr uint32_t CFG_ENABLE   = 1;
-	static constexpr uint32_t CFG_RESET    = 2;
-	static constexpr uint32_t CFG_FIX_CSUM = 4;
+	static constexpr uint32_t CFG_ENABLE    = 1;
+	static constexpr uint32_t CFG_RESET     = 2;
+	static constexpr uint32_t CFG_FIX_CSUM  = 4;
+
+	static constexpr uint32_t HAS_CMP_UNIT  = 1;
+	static constexpr uint32_t HAS_EDIT_UNIT = 2;
+	static constexpr uint32_t HAS_CSUM_UNIT = 4;
 
 	struct Registers
 	{
 		uint16_t config;
 		uint16_t log_identifier;
 		uint32_t match_enable;
-
+		uint32_t features;
+		uint32_t num_scripts;
+		uint32_t max_script_size;
+		uint32_t script_mem_offset;
+		uint32_t tx_fifo_size;
+		uint32_t extr_fifo_size;
 		uint64_t overflow_count_a;
 		uint64_t overflow_count_b;
 	};
@@ -50,6 +51,8 @@ public:
 public:
 	FrameDetector(const QByteArray &name, uint32_t index);
 	~FrameDetector();
+
+	void announce(QByteArray &output) const;
 
 	DeviceType getType() const;
 	uint64_t getPorts() const;
@@ -59,7 +62,7 @@ public:
 
 	void setReset(bool reset);
 	bool setProperty(PropertyID propID, const QByteArray &value);
-	bool getProperty(PropertyID propID, QByteArray &value);
+	bool getProperty(PropertyID propID, const QByteArray &params, QByteArray &value);
 
 private:
 	volatile Registers *m_regs;

@@ -30,6 +30,8 @@ public:
 	DmaBuffer(const QByteArray &name);
 	~DmaBuffer();
 
+	void announce(QByteArray &output) const;
+
 	DeviceType getType() const;
 	const char *getVirtAddr() const;
 	uint64_t getPhysAddr() const;
@@ -43,7 +45,7 @@ public:
 
 	void setReset(bool reset);
 	bool setProperty(PropertyID propID, const QByteArray &value);
-	bool getProperty(PropertyID propID, QByteArray &value);
+	bool getProperty(PropertyID propID, const QByteArray &params, QByteArray &value);
 
 private:
 	uint8_t *m_ptr;

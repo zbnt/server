@@ -39,6 +39,11 @@ SimpleTimer::~SimpleTimer()
 	}
 }
 
+void SimpleTimer::announce(QByteArray &output) const
+{
+	Q_UNUSED(output);
+}
+
 DeviceType SimpleTimer::getType() const
 {
 	return DEV_SIMPLE_TIMER;
@@ -173,9 +178,11 @@ bool SimpleTimer::setProperty(PropertyID propID, const QByteArray &value)
 	return true;
 }
 
-bool SimpleTimer::getProperty(PropertyID propID, QByteArray &value)
+bool SimpleTimer::getProperty(PropertyID propID, const QByteArray &params, QByteArray &value)
 {
 	if(!isReady()) return false;
+
+	Q_UNUSED(params);
 
 	switch(propID)
 	{

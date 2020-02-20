@@ -28,6 +28,8 @@ public:
 	AbstractDevice(const QByteArray &name, uint32_t index);
 	virtual ~AbstractDevice();
 
+	virtual void announce(QByteArray &output) const = 0;
+
 	const QByteArray &getName() const;
 	virtual DeviceType getType() const = 0;
 	virtual uint32_t getIndex() const;
@@ -38,7 +40,7 @@ public:
 
 	virtual void setReset(bool reset) = 0;
 	virtual bool setProperty(PropertyID propID, const QByteArray &value) = 0;
-	virtual bool getProperty(PropertyID propID, QByteArray &value) = 0;
+	virtual bool getProperty(PropertyID propID, const QByteArray &params, QByteArray &value) = 0;
 
 protected:
 	QByteArray m_name;

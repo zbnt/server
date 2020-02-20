@@ -41,6 +41,8 @@ public:
 	SimpleTimer(const QByteArray &name);
 	~SimpleTimer();
 
+	void announce(QByteArray &output) const;
+
 	DeviceType getType() const;
 
 	bool isReady() const;
@@ -51,7 +53,7 @@ public:
 
 	void setReset(bool reset);
 	bool setProperty(PropertyID propID, const QByteArray &value);
-	bool getProperty(PropertyID propID, QByteArray &value);
+	bool getProperty(PropertyID propID, const QByteArray &params, QByteArray &value);
 	uint64_t getCurrentTime() const;
 	uint64_t getMaximumTime() const;
 

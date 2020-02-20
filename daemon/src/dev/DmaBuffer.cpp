@@ -40,6 +40,11 @@ DmaBuffer::~DmaBuffer()
 	}
 }
 
+void DmaBuffer::announce(QByteArray &output) const
+{
+	Q_UNUSED(output);
+}
+
 DeviceType DmaBuffer::getType() const
 {
 	return DEV_DMA_BUFFER;
@@ -154,9 +159,10 @@ bool DmaBuffer::setProperty(PropertyID propID, const QByteArray &value)
 	return false;
 }
 
-bool DmaBuffer::getProperty(PropertyID propID, QByteArray &value)
+bool DmaBuffer::getProperty(PropertyID propID, const QByteArray &params, QByteArray &value)
 {
 	Q_UNUSED(propID);
+	Q_UNUSED(params);
 	Q_UNUSED(value);
 	return false;
 }

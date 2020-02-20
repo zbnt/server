@@ -39,6 +39,32 @@ FrameDetector::~FrameDetector()
 	}
 }
 
+void FrameDetector::announce(QByteArray &output) const
+{
+	if(!isReady()) return;
+
+	appendAsBytes<uint8_t>(output, m_idx);
+	appendAsBytes<uint8_t>(output, DEV_FRAME_DETECTOR);
+	appendAsBytes<uint16_t>(output, 4);
+
+	appendAsBytes<uint16_t>(output, PROP_PORTS);
+	appendAsBytes<uint16_t>(output, 2);
+	appendAsBytes<uint8_t>(output, m_portA);
+	appendAsBytes<uint8_t>(output, m_portB);
+
+	appendAsBytes<uint16_t>(output, PROP_FEATURE_BITS);
+	appendAsBytes<uint16_t>(output, 4);
+	appendAsBytes<uint32_t>(output, m_regs->features);
+
+	appendAsBytes<uint16_t>(output, PROP_NUM_SCRIPTS);
+	appendAsBytes<uint16_t>(output, 4);
+	appendAsBytes<uint32_t>(output, m_regs->num_scripts);
+
+	appendAsBytes<uint16_t>(output, PROP_MAX_SCRIPT_SIZE);
+	appendAsBytes<uint16_t>(output, 4);
+	appendAsBytes<uint32_t>(output, m_regs->max_script_size);
+}
+
 DeviceType FrameDetector::getType() const
 {
 	return DEV_FRAME_DETECTOR;
@@ -168,53 +194,25 @@ bool FrameDetector::setProperty(PropertyID propID, const QByteArray &value)
 			break;
 		}
 
-		case PROP_FRAME_PATTERN:
+		case PROP_FRAME_SCRIPT:
 		{
-			if(value.length() < 2) return false;
+			if(value.length() < 4) return false;
+			if(value.length() % 4) return false;
 
-			uint8_t dir = readAsNumber<uint8_t>(value, 0) & 1;
-			uint8_t idx = readAsNumber<uint8_t>(value, 1) & 3;
+			uint32_t idx = readAsNumber<uint32_t>(value, 0);
+			if(idx >= m_regs->num_scripts) return false;
 
-			uint32_t mask = 1 << (16*dir + idx);
+			uint32_t mask = 1 << idx;
 			uint32_t enable = m_regs->match_enable;
-			uint8_t *ptr = makePointer<uint8_t>(m_regs, dir ? FD_PATTERN_B_DATA_OFFSET : FD_PATTERN_A_DATA_OFFSET);
+			uint32_t *ptr = makePointer<uint32_t>(m_regs, m_regs->script_mem_offset + idx * m_regs->max_script_size);
 
 			m_regs->match_enable = enable & ~mask;
 
-			for(int i = idx, j = 2; i < FD_MEM_SIZE; i += 4, ++j)
+			for(int i = 0, j = 4, k = m_regs->max_script_size; i < k; ++i, j += 4)
 			{
 				if(j < value.length())
 				{
-					ptr[i] = value[j];
-				}
-				else
-				{
-					ptr[i] = 0;
-				}
-			}
-
-			m_regs->match_enable = enable;
-			break;
-		}
-
-		case PROP_FRAME_PATTERN_FLAGS:
-		{
-			if(value.length() < 2) return false;
-
-			uint8_t dir = readAsNumber<uint8_t>(value, 0) & 1;
-			uint8_t idx = readAsNumber<uint8_t>(value, 1) & 3;
-
-			uint32_t mask = 1 << (16*dir + idx);
-			uint32_t enable = m_regs->match_enable;
-			uint8_t *ptr = makePointer<uint8_t>(m_regs, dir ? FD_PATTERN_B_FLAGS_OFFSET : FD_PATTERN_A_FLAGS_OFFSET);
-
-			m_regs->match_enable = enable & ~mask;
-
-			for(int i = idx, j = 2; i < FD_MEM_SIZE; i += 4, ++j)
-			{
-				if(j < value.length())
-				{
-					ptr[i] = value[j];
+					ptr[i] = readAsNumber<uint32_t>(value, j);
 				}
 				else
 				{
@@ -235,7 +233,7 @@ bool FrameDetector::setProperty(PropertyID propID, const QByteArray &value)
 	return true;
 }
 
-bool FrameDetector::getProperty(PropertyID propID, QByteArray &value)
+bool FrameDetector::getProperty(PropertyID propID, const QByteArray &params, QByteArray &value)
 {
 	if(!isReady()) return false;
 
@@ -266,43 +264,18 @@ bool FrameDetector::getProperty(PropertyID propID, QByteArray &value)
 			break;
 		}
 
-		case PROP_FRAME_PATTERN:
+		case PROP_FRAME_SCRIPT:
 		{
-			uint8_t *ptrA = makePointer<uint8_t>(m_regs, FD_PATTERN_A_DATA_OFFSET);
-			uint8_t *ptrB = makePointer<uint8_t>(m_regs, FD_PATTERN_B_DATA_OFFSET);
+			if(params.length() < 4) return false;
 
-			appendAsBytes<uint32_t>(value, FD_MEM_SIZE / FD_NUM_PATTERNS);
+			uint32_t idx = readAsNumber<uint32_t>(params, 0);
+			if(idx >= m_regs->num_scripts) return false;
 
-			for(uint8_t *ptr : {ptrA, ptrB})
+			uint32_t *ptr = makePointer<uint32_t>(m_regs, m_regs->script_mem_offset + idx * m_regs->max_script_size);
+
+			for(int i = 0, j = m_regs->max_script_size; i < j; ++i)
 			{
-				for(int idx = 0; idx < FD_NUM_PATTERNS; ++idx)
-				{
-					for(int j = idx; j < FD_MEM_SIZE; j += 4)
-					{
-						value.append(ptr[j]);
-					}
-				}
-			}
-
-			break;
-		}
-
-		case PROP_FRAME_PATTERN_FLAGS:
-		{
-			uint8_t *ptrA = makePointer<uint8_t>(m_regs, FD_PATTERN_A_FLAGS_OFFSET);
-			uint8_t *ptrB = makePointer<uint8_t>(m_regs, FD_PATTERN_B_FLAGS_OFFSET);
-
-			appendAsBytes<uint32_t>(value, FD_MEM_SIZE / FD_NUM_PATTERNS);
-
-			for(uint8_t *ptr : {ptrA, ptrB})
-			{
-				for(int idx = 0; idx < FD_NUM_PATTERNS; ++idx)
-				{
-					for(int j = idx; j < FD_MEM_SIZE; j += 4)
-					{
-						value.append(ptr[j]);
-					}
-				}
+				appendAsBytes(value, ptr[i]);
 			}
 
 			break;

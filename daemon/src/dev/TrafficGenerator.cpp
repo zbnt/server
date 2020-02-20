@@ -39,6 +39,23 @@ TrafficGenerator::~TrafficGenerator()
 	}
 }
 
+void TrafficGenerator::announce(QByteArray &output) const
+{
+	if(!isReady()) return;
+
+	appendAsBytes<uint8_t>(output, m_idx);
+	appendAsBytes<uint8_t>(output, DEV_TRAFFIC_GENERATOR);
+	appendAsBytes<uint16_t>(output, 2);
+
+	appendAsBytes<uint16_t>(output, PROP_PORTS);
+	appendAsBytes<uint16_t>(output, 1);
+	appendAsBytes<uint8_t>(output, m_port);
+
+	appendAsBytes<uint16_t>(output, PROP_MAX_TEMPLATE_SIZE);
+	appendAsBytes<uint16_t>(output, 4);
+	appendAsBytes<uint32_t>(output, TGEN_MEM_SIZE);
+}
+
 DeviceType TrafficGenerator::getType() const
 {
 	return DEV_TRAFFIC_GENERATOR;
@@ -245,9 +262,11 @@ bool TrafficGenerator::setProperty(PropertyID propID, const QByteArray &value)
 	return true;
 }
 
-bool TrafficGenerator::getProperty(PropertyID propID, QByteArray &value)
+bool TrafficGenerator::getProperty(PropertyID propID, const QByteArray &params, QByteArray &value)
 {
 	if(!isReady()) return false;
+
+	Q_UNUSED(params);
 
 	switch(propID)
 	{

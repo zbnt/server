@@ -39,6 +39,20 @@ LatencyMeasurer::~LatencyMeasurer()
 	}
 }
 
+void LatencyMeasurer::announce(QByteArray &output) const
+{
+	if(!isReady()) return;
+
+	appendAsBytes<uint8_t>(output, m_idx);
+	appendAsBytes<uint8_t>(output, DEV_LATENCY_MEASURER);
+	appendAsBytes<uint16_t>(output, 1);
+
+	appendAsBytes<uint16_t>(output, PROP_PORTS);
+	appendAsBytes<uint16_t>(output, 2);
+	appendAsBytes<uint8_t>(output, m_portA);
+	appendAsBytes<uint8_t>(output, m_portB);
+}
+
 DeviceType LatencyMeasurer::getType() const
 {
 	return DEV_LATENCY_MEASURER;
@@ -250,9 +264,11 @@ bool LatencyMeasurer::setProperty(PropertyID propID, const QByteArray &value)
 	return true;
 }
 
-bool LatencyMeasurer::getProperty(PropertyID propID, QByteArray &value)
+bool LatencyMeasurer::getProperty(PropertyID propID, const QByteArray &params, QByteArray &value)
 {
 	if(!isReady()) return false;
+
+	Q_UNUSED(params);
 
 	switch(propID)
 	{

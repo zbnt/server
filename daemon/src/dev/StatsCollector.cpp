@@ -39,6 +39,19 @@ StatsCollector::~StatsCollector()
 	}
 }
 
+void StatsCollector::announce(QByteArray &output) const
+{
+	if(!isReady()) return;
+
+	appendAsBytes<uint8_t>(output, m_idx);
+	appendAsBytes<uint8_t>(output, DEV_STATS_COLLECTOR);
+	appendAsBytes<uint16_t>(output, 1);
+
+	appendAsBytes<uint16_t>(output, PROP_PORTS);
+	appendAsBytes<uint16_t>(output, 1);
+	appendAsBytes<uint8_t>(output, m_port);
+}
+
 DeviceType StatsCollector::getType() const
 {
 	return DEV_STATS_COLLECTOR;
@@ -179,9 +192,11 @@ bool StatsCollector::setProperty(PropertyID propID, const QByteArray &value)
 	return true;
 }
 
-bool StatsCollector::getProperty(PropertyID propID, QByteArray &value)
+bool StatsCollector::getProperty(PropertyID propID, const QByteArray &params, QByteArray &value)
 {
 	if(!isReady()) return false;
+
+	Q_UNUSED(params);
 
 	switch(propID)
 	{

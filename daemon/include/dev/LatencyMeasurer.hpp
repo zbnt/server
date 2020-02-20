@@ -58,6 +58,8 @@ public:
 	LatencyMeasurer(const QByteArray &name, uint32_t index);
 	~LatencyMeasurer();
 
+	void announce(QByteArray &output) const;
+
 	DeviceType getType() const;
 	uint64_t getPorts() const;
 
@@ -66,7 +68,7 @@ public:
 
 	void setReset(bool reset);
 	bool setProperty(PropertyID propID, const QByteArray &value);
-	bool getProperty(PropertyID propID, QByteArray &value);
+	bool getProperty(PropertyID propID, const QByteArray &params, QByteArray &value);
 
 private:
 	volatile Registers *m_regs;
