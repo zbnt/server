@@ -6,12 +6,12 @@ set(ZBNT_DAEMON_SRC
 	"src/Main.cpp"
 	"src/FdtUtils.cpp"
 	"src/Settings.cpp"
-	"src/MessageReceiver.cpp"
 	"src/DiscoveryServer.cpp"
 	"src/BitstreamManager.cpp"
 	"src/MeasurementServer.cpp"
 
 	"../common/src/Utils.cpp"
+	"../common/src/MessageReceiver.cpp"
 
 	"src/dev/AbstractDevice.cpp"
 	"src/dev/AxiDma.cpp"

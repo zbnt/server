@@ -27,26 +27,61 @@
 void writeMessage(QIODevice *dev, MessageID msgID, const QByteArray &value)
 {
 	dev->write(MSG_MAGIC_IDENTIFIER, 4);
-	writeAsBytes<uint16_t>(dev, msgID);
-	writeAsBytes<uint16_t>(dev, value.size());
+
+	if(value.size() < 65536)
+	{
+		writeAsBytes<uint16_t>(dev, msgID);
+		writeAsBytes<uint16_t>(dev, value.size());
+	}
+	else
+	{
+		writeAsBytes<uint16_t>(dev, MSG_ID_EXTENDED);
+		writeAsBytes<uint16_t>(dev, msgID);
+		writeAsBytes<uint32_t>(dev, value.size());
+	}
+
 	dev->write(value);
 }
 
 void buildMessage(QByteArray &array, MessageID msgID, const QByteArray &value)
 {
 	array.append(MSG_MAGIC_IDENTIFIER, 4);
-	appendAsBytes<uint16_t>(array, msgID);
-	appendAsBytes<uint16_t>(array, value.size());
+
+	if(value.size() < 65536)
+	{
+		appendAsBytes<uint16_t>(array, msgID);
+		appendAsBytes<uint16_t>(array, value.size());
+	}
+	else
+	{
+		appendAsBytes<uint16_t>(array, MSG_ID_EXTENDED);
+		appendAsBytes<uint16_t>(array, msgID);
+		appendAsBytes<uint32_t>(array, value.size());
+	}
+
 	array.append(value);
 }
 
 void setDeviceProperty(QByteArray &array, uint8_t devID, PropertyID propID, const QByteArray &value)
 {
 	array.append(MSG_MAGIC_IDENTIFIER, 4);
-	appendAsBytes<uint16_t>(array, MSG_ID_SET_PROPERTY);
-	appendAsBytes<uint16_t>(array, 3 + value.size());
-	appendAsBytes<uint8_t>(array, devID);
-	appendAsBytes<uint16_t>(array, propID);
+
+	if(value.size() + 3 < 65536)
+	{
+		appendAsBytes<uint16_t>(array, MSG_ID_SET_PROPERTY);
+		appendAsBytes<uint16_t>(array, 3 + value.size());
+		appendAsBytes<uint8_t>(array, devID);
+		appendAsBytes<uint16_t>(array, propID);
+	}
+	else
+	{
+		appendAsBytes<uint16_t>(array, MSG_ID_EXTENDED);
+		appendAsBytes<uint16_t>(array, MSG_ID_SET_PROPERTY);
+		appendAsBytes<uint32_t>(array, 3 + value.size());
+		appendAsBytes<uint8_t>(array, devID);
+		appendAsBytes<uint16_t>(array, propID);
+	}
+
 	array.append(value);
 }
 

@@ -80,6 +80,61 @@ void MessageReceiver::handleIncomingData(const QByteArray &readData)
 						m_rxMsgSize |= c << 8;
 						m_rxByteCount = 0;
 
+						if(m_rxMsgID == MSG_ID_EXTENDED)
+						{
+							m_rxStatus = MSG_RX_EXTENDED_HEADER;
+							m_rxMsgID = m_rxMsgSize;
+						}
+						else
+						{
+							if(!m_rxMsgSize)
+							{
+								m_rxStatus = MSG_RX_MAGIC;
+								onMessageReceived(m_rxMsgID, m_rxBuffer);
+							}
+							else
+							{
+								m_rxStatus = MSG_RX_DATA;
+							}
+						}
+
+						break;
+					}
+				}
+
+				break;
+			}
+
+			case MSG_RX_EXTENDED_HEADER:
+			{
+				switch(m_rxByteCount)
+				{
+					case 0:
+					{
+						m_rxMsgSize = c;
+						m_rxByteCount++;
+						break;
+					}
+
+					case 1:
+					{
+						m_rxMsgSize |= c << 8;
+						m_rxByteCount++;
+						break;
+					}
+
+					case 2:
+					{
+						m_rxMsgSize |= c << 16;
+						m_rxByteCount++;
+						break;
+					}
+
+					case 3:
+					{
+						m_rxMsgSize |= c << 24;
+						m_rxByteCount = 0;
+
 						if(!m_rxMsgSize)
 						{
 							m_rxStatus = MSG_RX_MAGIC;
