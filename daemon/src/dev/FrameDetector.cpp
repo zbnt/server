@@ -45,7 +45,7 @@ void FrameDetector::announce(QByteArray &output) const
 
 	appendAsBytes<uint8_t>(output, m_idx);
 	appendAsBytes<uint8_t>(output, DEV_FRAME_DETECTOR);
-	appendAsBytes<uint16_t>(output, 4);
+	appendAsBytes<uint16_t>(output, 30);
 
 	appendAsBytes<uint16_t>(output, PROP_PORTS);
 	appendAsBytes<uint16_t>(output, 2);

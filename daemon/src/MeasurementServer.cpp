@@ -207,7 +207,6 @@ void MeasurementServer::onMessageReceived(quint16 id, const QByteArray &data)
 			if(m_helloReceived) break;
 
 			QByteArray bitstreamList;
-			appendAsBytes<uint16_t>(bitstreamList, g_bitstreamList.size());
 
 			for(const QString &bitName : g_bitstreamList)
 			{

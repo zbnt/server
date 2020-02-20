@@ -45,7 +45,7 @@ void TrafficGenerator::announce(QByteArray &output) const
 
 	appendAsBytes<uint8_t>(output, m_idx);
 	appendAsBytes<uint8_t>(output, DEV_TRAFFIC_GENERATOR);
-	appendAsBytes<uint16_t>(output, 2);
+	appendAsBytes<uint16_t>(output, 13);
 
 	appendAsBytes<uint16_t>(output, PROP_PORTS);
 	appendAsBytes<uint16_t>(output, 1);

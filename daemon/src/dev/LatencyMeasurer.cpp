@@ -45,7 +45,7 @@ void LatencyMeasurer::announce(QByteArray &output) const
 
 	appendAsBytes<uint8_t>(output, m_idx);
 	appendAsBytes<uint8_t>(output, DEV_LATENCY_MEASURER);
-	appendAsBytes<uint16_t>(output, 1);
+	appendAsBytes<uint16_t>(output, 6);
 
 	appendAsBytes<uint16_t>(output, PROP_PORTS);
 	appendAsBytes<uint16_t>(output, 2);
