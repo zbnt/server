@@ -26,13 +26,13 @@ MessageReceiver::~MessageReceiver()
 
 void MessageReceiver::handleIncomingData(const QByteArray &readData)
 {
-	for(uint8_t c : readData)
+	for(quint8 c : readData)
 	{
 		switch(m_rxStatus)
 		{
 			case MSG_RX_MAGIC:
 			{
-				if(c == MSG_MAGIC_IDENTIFIER[m_rxByteCount])
+				if(c == quint8(MSG_MAGIC_IDENTIFIER[m_rxByteCount]))
 				{
 					m_rxByteCount++;
 
