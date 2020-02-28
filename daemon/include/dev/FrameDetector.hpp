@@ -25,19 +25,19 @@
 class FrameDetector : public AbstractDevice
 {
 public:
-	static constexpr uint32_t CFG_ENABLE    = 1;
-	static constexpr uint32_t CFG_RESET     = 2;
-	static constexpr uint32_t CFG_FIX_CSUM  = 4;
+	static constexpr uint32_t CFG_ENABLE     = 1;
+	static constexpr uint32_t CFG_RESET      = 2;
+	static constexpr uint32_t CFG_LOG_ENABLE = 4;
 
-	static constexpr uint32_t HAS_CMP_UNIT  = 1;
-	static constexpr uint32_t HAS_EDIT_UNIT = 2;
-	static constexpr uint32_t HAS_CSUM_UNIT = 4;
+	static constexpr uint32_t HAS_CMP_UNIT   = 1;
+	static constexpr uint32_t HAS_EDIT_UNIT  = 2;
+	static constexpr uint32_t HAS_CSUM_UNIT  = 4;
 
 	struct Registers
 	{
 		uint16_t config;
 		uint16_t log_identifier;
-		uint32_t match_enable;
+		uint32_t script_enable;
 		uint32_t features;
 		uint32_t num_scripts;
 		uint32_t max_script_size;
@@ -69,4 +69,5 @@ private:
 	size_t m_regsSize;
 
 	uint8_t m_portA, m_portB;
+	QVector<QByteArray> m_scriptNames;
 };

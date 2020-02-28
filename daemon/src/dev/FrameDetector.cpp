@@ -45,7 +45,7 @@ void FrameDetector::announce(QByteArray &output) const
 
 	appendAsBytes<uint8_t>(output, m_idx);
 	appendAsBytes<uint8_t>(output, DEV_FRAME_DETECTOR);
-	appendAsBytes<uint16_t>(output, 30);
+	appendAsBytes<uint16_t>(output, 42);
 
 	appendAsBytes<uint16_t>(output, PROP_PORTS);
 	appendAsBytes<uint16_t>(output, 2);
@@ -63,6 +63,11 @@ void FrameDetector::announce(QByteArray &output) const
 	appendAsBytes<uint16_t>(output, PROP_MAX_SCRIPT_SIZE);
 	appendAsBytes<uint16_t>(output, 4);
 	appendAsBytes<uint32_t>(output, m_regs->max_script_size);
+
+	appendAsBytes<uint16_t>(output, PROP_FIFO_SIZE);
+	appendAsBytes<uint16_t>(output, 8);
+	appendAsBytes<uint32_t>(output, m_regs->tx_fifo_size);
+	appendAsBytes<uint32_t>(output, m_regs->extr_fifo_size);
 }
 
 DeviceType FrameDetector::getType() const
@@ -131,6 +136,7 @@ bool FrameDetector::loadDevice(const void *fdt, int offset)
 	}
 
 	m_regs->log_identifier = m_idx | MSG_ID_MEASUREMENT;
+	m_scriptNames.fill("", 2*m_regs->num_scripts);
 
 	close(fd);
 	return true;
@@ -164,27 +170,27 @@ bool FrameDetector::setProperty(PropertyID propID, const QByteArray &value)
 			break;
 		}
 
-		case PROP_ENABLE_CSUM_FIX:
+		case PROP_ENABLE_LOG:
 		{
 			if(value.length() < 1) return false;
 
 			if(readAsNumber<uint8_t>(value, 0))
 			{
-				m_regs->config |= CFG_FIX_CSUM;
+				m_regs->config |= CFG_LOG_ENABLE;
 			}
 			else
 			{
-				m_regs->config &= ~CFG_FIX_CSUM;
+				m_regs->config &= ~CFG_LOG_ENABLE;
 			}
 
 			break;
 		}
 
-		case PROP_ENABLE_PATTERN:
+		case PROP_ENABLE_SCRIPT:
 		{
 			if(value.length() < 4) return false;
 
-			m_regs->match_enable = readAsNumber<uint32_t>(value, 0);
+			m_regs->script_enable = readAsNumber<uint32_t>(value, 0);
 			break;
 		}
 
@@ -200,13 +206,13 @@ bool FrameDetector::setProperty(PropertyID propID, const QByteArray &value)
 			if(value.length() % 4) return false;
 
 			uint32_t idx = readAsNumber<uint32_t>(value, 0);
-			if(idx >= m_regs->num_scripts) return false;
+			if(idx >= 2*m_regs->num_scripts) return false;
 
 			uint32_t mask = 1 << idx;
-			uint32_t enable = m_regs->match_enable;
+			uint32_t enable = m_regs->script_enable;
 			uint32_t *ptr = makePointer<uint32_t>(m_regs, m_regs->script_mem_offset + idx * m_regs->max_script_size);
 
-			m_regs->match_enable = enable & ~mask;
+			m_regs->script_enable = enable & ~mask;
 
 			for(int i = 0, j = 4, k = m_regs->max_script_size; i < k; ++i, j += 4)
 			{
@@ -220,7 +226,18 @@ bool FrameDetector::setProperty(PropertyID propID, const QByteArray &value)
 				}
 			}
 
-			m_regs->match_enable = enable;
+			m_regs->script_enable = enable;
+			break;
+		}
+
+		case PROP_FRAME_SCRIPT_NAME:
+		{
+			if(value.length() < 4) return false;
+
+			uint32_t idx = readAsNumber<uint32_t>(value, 0);
+			if(idx >= 2*m_regs->num_scripts) return false;
+
+			m_scriptNames[idx] = value.mid(4, -1);
 			break;
 		}
 
@@ -245,15 +262,15 @@ bool FrameDetector::getProperty(PropertyID propID, const QByteArray &params, QBy
 			break;
 		}
 
-		case PROP_ENABLE_CSUM_FIX:
+		case PROP_ENABLE_LOG:
 		{
-			appendAsBytes<uint8_t>(value, !!(m_regs->config & CFG_FIX_CSUM));
+			appendAsBytes<uint8_t>(value, !!(m_regs->config & CFG_LOG_ENABLE));
 			break;
 		}
 
-		case PROP_ENABLE_PATTERN:
+		case PROP_ENABLE_SCRIPT:
 		{
-			appendAsBytes(value, m_regs->match_enable);
+			appendAsBytes(value, m_regs->script_enable);
 			break;
 		}
 
@@ -269,7 +286,7 @@ bool FrameDetector::getProperty(PropertyID propID, const QByteArray &params, QBy
 			if(params.length() < 4) return false;
 
 			uint32_t idx = readAsNumber<uint32_t>(params, 0);
-			if(idx >= m_regs->num_scripts) return false;
+			if(idx >= 2*m_regs->num_scripts) return false;
 
 			uint32_t *ptr = makePointer<uint32_t>(m_regs, m_regs->script_mem_offset + idx * m_regs->max_script_size);
 
@@ -278,6 +295,17 @@ bool FrameDetector::getProperty(PropertyID propID, const QByteArray &params, QBy
 				appendAsBytes(value, ptr[i]);
 			}
 
+			break;
+		}
+
+		case PROP_FRAME_SCRIPT_NAME:
+		{
+			if(params.length() < 4) return false;
+
+			uint32_t idx = readAsNumber<uint32_t>(params, 0);
+			if(idx >= 2*m_regs->num_scripts) return false;
+
+			value.append(m_scriptNames[idx]);
 			break;
 		}
 
