@@ -135,6 +135,7 @@ bool FrameDetector::loadDevice(const void *fdt, int offset)
 		return false;
 	}
 
+	m_regs->config = CFG_LOG_ENABLE | CFG_ENABLE;
 	m_regs->log_identifier = m_idx | MSG_ID_MEASUREMENT;
 	m_scriptNames.fill("", 2*m_regs->num_scripts);
 
