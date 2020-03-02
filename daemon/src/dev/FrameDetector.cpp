@@ -211,7 +211,7 @@ bool FrameDetector::setProperty(PropertyID propID, const QByteArray &value)
 
 			uint32_t mask = 1 << idx;
 			uint32_t enable = m_regs->script_enable;
-			uint32_t *ptr = makePointer<uint32_t>(m_regs, m_regs->script_mem_offset + idx * m_regs->max_script_size);
+			uint32_t *ptr = makePointer<uint32_t>(m_regs, m_regs->script_mem_offset + 4 * idx * m_regs->max_script_size);
 
 			m_regs->script_enable = enable & ~mask;
 
@@ -289,7 +289,7 @@ bool FrameDetector::getProperty(PropertyID propID, const QByteArray &params, QBy
 			uint32_t idx = readAsNumber<uint32_t>(params, 0);
 			if(idx >= 2*m_regs->num_scripts) return false;
 
-			uint32_t *ptr = makePointer<uint32_t>(m_regs, m_regs->script_mem_offset + idx * m_regs->max_script_size);
+			uint32_t *ptr = makePointer<uint32_t>(m_regs, m_regs->script_mem_offset + 4 * idx * m_regs->max_script_size);
 
 			for(int i = 0, j = m_regs->max_script_size; i < j; ++i)
 			{
