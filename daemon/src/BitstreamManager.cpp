@@ -30,6 +30,7 @@
 #include <FdtUtils.hpp>
 #include <Settings.hpp>
 #include <dev/AxiDma.hpp>
+#include <dev/AxiMdio.hpp>
 #include <dev/DmaBuffer.hpp>
 #include <dev/SimpleTimer.hpp>
 #include <dev/FrameDetector.hpp>
@@ -190,6 +191,18 @@ bool loadBitstream(const QString &bitstreamName)
 					qCritical("[bitmgr] E: Failed to create SimpleTimer instance for %s", name.constData());
 					return false;
 				}
+			}
+			else if(name.startsWith("axi_mdio@"))
+			{
+				AxiMdio *dev = new AxiMdio(name, g_deviceList.size());
+
+				if(!dev || !dev->loadDevice(fdt, offset))
+				{
+					qCritical("[bitmgr] E: Failed to create AxiMdio instance for %s", name.constData());
+					return false;
+				}
+
+				g_deviceList.append(dev);
 			}
 			else if(name.startsWith("zbnt_fd@"))
 			{

@@ -85,7 +85,8 @@ namespace Messages
 		PROP_NUM_SCRIPTS,
 		PROP_MAX_TEMPLATE_SIZE,
 		PROP_MAX_SCRIPT_SIZE,
-		PROP_FIFO_SIZE
+		PROP_FIFO_SIZE,
+		PROP_PHY_ADDR
 	};
 
 	enum RxStatus
@@ -99,6 +100,7 @@ namespace Messages
 	enum DeviceType
 	{
 		DEV_AXI_DMA = 1,
+		DEV_AXI_MDIO,
 		DEV_DMA_BUFFER,
 		DEV_SIMPLE_TIMER,
 		DEV_FRAME_DETECTOR,

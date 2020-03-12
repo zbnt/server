@@ -15,6 +15,7 @@ set(ZBNT_DAEMON_SRC
 
 	"src/dev/AbstractDevice.cpp"
 	"src/dev/AxiDma.cpp"
+	"src/dev/AxiMdio.cpp"
 	"src/dev/DmaBuffer.cpp"
 	"src/dev/SimpleTimer.cpp"
 	"src/dev/FrameDetector.cpp"
