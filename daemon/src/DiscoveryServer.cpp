@@ -26,27 +26,23 @@
 #include <Settings.hpp>
 #include <MeasurementServer.hpp>
 
-DiscoveryServer *g_discoverySrv = nullptr;
+QVector<DiscoveryServer*> g_discoverySrv;
 
-DiscoveryServer::DiscoveryServer(QObject *parent) : QObject(parent)
+DiscoveryServer::DiscoveryServer(const QNetworkInterface &iface, QObject *parent)
+	: QObject(parent), m_iface(iface)
 {
 	m_server = new QUdpSocket(this);
 	connect(m_server, &QUdpSocket::readyRead, this, &DiscoveryServer::onReadyRead);
 
 	QHostAddress broadcastAddr;
 
-	for(const QNetworkInterface &iface : QNetworkInterface::allInterfaces())
+	for(const QNetworkAddressEntry &address : iface.addressEntries())
 	{
-		if(iface.type() == QNetworkInterface::Loopback) continue;
-
-		for(const QNetworkAddressEntry &address : iface.addressEntries())
+		if(address.ip().protocol() == QAbstractSocket::IPv4Protocol)
 		{
-			if(address.ip().protocol() == QAbstractSocket::IPv4Protocol)
+			if(broadcastAddr.isNull() || broadcastAddr.isLinkLocal())
 			{
-				if(broadcastAddr.isNull() || broadcastAddr.isLinkLocal())
-				{
-					broadcastAddr = address.broadcast();
-				}
+				broadcastAddr = address.broadcast();
 			}
 		}
 	}
@@ -87,25 +83,20 @@ void DiscoveryServer::onReadyRead()
 
 			if(host.length() > 255) host.resize(255);
 
-			for(const QNetworkInterface &iface : QNetworkInterface::allInterfaces())
+			for(const QNetworkAddressEntry &address : m_iface.addressEntries())
 			{
-				if(iface.type() == QNetworkInterface::Loopback) continue;
-
-				for(const QNetworkAddressEntry &address : iface.addressEntries())
+				if(address.ip().protocol() == QAbstractSocket::IPv4Protocol)
 				{
-					if(address.ip().protocol() == QAbstractSocket::IPv4Protocol)
+					if(ip4.isNull() || ip4.isLinkLocal())
 					{
-						if(ip4.isNull() || ip4.isLinkLocal())
-						{
-							ip4 = address.ip();
-						}
+						ip4 = address.ip();
 					}
-					else
+				}
+				else
+				{
+					if(ip6.isNull() && !ip6.isLinkLocal())
 					{
-						if(ip6.isNull() && !ip6.isLinkLocal())
-						{
-							ip6 = address.ip();
-						}
+						ip6 = address.ip();
 					}
 				}
 			}

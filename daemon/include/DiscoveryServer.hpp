@@ -19,7 +19,9 @@
 #pragma once
 
 #include <QTimer>
+#include <QVector>
 #include <QUdpSocket>
+#include <QNetworkInterface>
 
 #include <Messages.hpp>
 #include <MessageReceiver.hpp>
@@ -27,7 +29,7 @@
 class DiscoveryServer : public QObject, public MessageReceiver
 {
 public:
-	DiscoveryServer(QObject *parent = nullptr);
+	DiscoveryServer(const QNetworkInterface &iface, QObject *parent = nullptr);
 	~DiscoveryServer();
 
 	void onMessageReceived(quint16 id, const QByteArray &data);
@@ -36,7 +38,8 @@ public:
 private:
 	bool m_received = false;
 	QByteArray m_recvdTime;
+	QNetworkInterface m_iface;
 	QUdpSocket *m_server = nullptr;
 };
 
-extern DiscoveryServer *g_discoverySrv;
+extern QVector<DiscoveryServer*> g_discoverySrv;

@@ -62,7 +62,21 @@ int main(int argc, char **argv)
 
 	// Initialize Qt application
 
-	g_discoverySrv = new DiscoveryServer();
+	for(const QNetworkInterface &iface : QNetworkInterface::allInterfaces())
+	{
+		switch(iface.type())
+		{
+			case QNetworkInterface::Ethernet:
+			case QNetworkInterface::Wifi:
+			case QNetworkInterface::Virtual:
+			{
+				g_discoverySrv.append(new DiscoveryServer(iface));
+			}
+
+			default: { }
+		}
+	}
+
 	g_measurementSrv = new MeasurementServer();
 
 	return app.exec();
