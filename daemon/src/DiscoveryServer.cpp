@@ -23,6 +23,7 @@
 #include <QNetworkInterface>
 
 #include <Utils.hpp>
+#include <Version.hpp>
 #include <Settings.hpp>
 #include <MeasurementServer.hpp>
 

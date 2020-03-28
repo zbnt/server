@@ -27,6 +27,7 @@
 #include <QThread>
 
 #include <Utils.hpp>
+#include <Version.hpp>
 #include <Settings.hpp>
 #include <DiscoveryServer.hpp>
 #include <BitstreamManager.hpp>
@@ -40,12 +41,12 @@ int main(int argc, char **argv)
 
 	if(argc == 2)
 	{
-		qInfo("[zbnt] Running version " ZBNT_VERSION);
+		qInfo("[zbnt] Running version %s", ZBNT_VERSION);
 		loadSettings(ZBNT_CFG_PATH "/daemon.cfg", argv[1]);
 	}
 	else if(argc == 3)
 	{
-		qInfo("[zbnt] Running version " ZBNT_VERSION);
+		qInfo("[zbnt] Running version %s", ZBNT_VERSION);
 		loadSettings(argv[2], argv[1]);
 	}
 	else

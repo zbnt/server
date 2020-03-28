@@ -12,6 +12,7 @@ set(ZBNT_DAEMON_SRC
 
 	"../common/src/Utils.cpp"
 	"../common/src/MessageReceiver.cpp"
+	"${CMAKE_BINARY_DIR}/Version.cpp"
 
 	"src/dev/AbstractDevice.cpp"
 	"src/dev/AxiDma.cpp"
@@ -24,14 +25,15 @@ set(ZBNT_DAEMON_SRC
 	"src/dev/TrafficGenerator.cpp"
 )
 
+set_source_files_properties("${CMAKE_BINARY_DIR}/Version.cpp" PROPERTIES GENERATED 1)
+
 add_executable(zbnt_daemon ${ZBNT_DAEMON_SRC})
+add_dependencies(zbnt_daemon zbnt_genver)
 target_link_libraries(zbnt_daemon Qt5::Core Qt5::Network ${libfdt} -lpthread)
-target_include_directories(zbnt_daemon PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/../common/include")
+target_include_directories(zbnt_daemon PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/../common/include" "${CMAKE_BINARY_DIR}")
 
 target_compile_definitions(
 	zbnt_daemon PUBLIC
-	ZBNT_VERSION="${PROJECT_VERSION}"
-	ZBNT_VERSION_INT=${ZBNT_VERSION_INT}
 	ZBNT_CFG_PATH="${CFG_PATH}"
 	ZBNT_FIRMWARE_PATH="${FIRMWARE_PATH}"
 	ZBNT_SYSFS_PATH="${SYSFS_PATH}"
