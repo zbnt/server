@@ -37,7 +37,7 @@ public:
 
 private:
 	bool m_received = false;
-	QByteArray m_recvdTime;
+	QByteArray m_validator;
 	QNetworkInterface m_iface;
 	QUdpSocket *m_server = nullptr;
 };

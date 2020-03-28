@@ -62,7 +62,7 @@ void DiscoveryServer::onMessageReceived(quint16 id, const QByteArray &data)
 	if(id == MSG_ID_DISCOVERY && data.length() == 8)
 	{
 		m_received = true;
-		m_recvdTime = data;
+		m_validator = data;
 	}
 }
 
@@ -106,9 +106,14 @@ void DiscoveryServer::onReadyRead()
 
 			discoveryResponse.append(MSG_MAGIC_IDENTIFIER, 4);
 			appendAsBytes<quint16>(discoveryResponse, MSG_ID_DISCOVERY);
-			appendAsBytes<quint16>(discoveryResponse, 4 + 8 + 4 + 16 + 4 + host.length());
+			appendAsBytes<quint16>(discoveryResponse, 8 + 4 + 16 + 16 + 1 + 4 + 16 + 2 + host.length());
+
+			discoveryResponse.append(m_validator);
+
 			appendAsBytes<quint32>(discoveryResponse, ZBNT_VERSION_INT);
-			discoveryResponse.append(m_recvdTime);
+			discoveryResponse.append(padString(ZBNT_VERSION_PREREL, 16));
+			discoveryResponse.append(padString(ZBNT_VERSION_COMMIT, 16));
+			appendAsBytes<quint8>(discoveryResponse, ZBNT_VERSION_DIRTY);
 
 			if(!ip4.isNull())
 			{
@@ -129,7 +134,6 @@ void DiscoveryServer::onReadyRead()
 			}
 
 			appendAsBytes<quint16>(discoveryResponse, g_daemonCfg.port);
-			appendAsBytes<quint16>(discoveryResponse, 0); // Reserved
 
 			discoveryResponse.append(host);
 
