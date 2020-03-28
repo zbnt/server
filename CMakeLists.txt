@@ -25,7 +25,7 @@ add_custom_target(
 	zbnt_genver ALL
 	COMMAND "python3" "cmake/GenerateVersion.py" "${CMAKE_BINARY_DIR}" "${ZBNT_FALLBACK_VERSION}"
 	WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-	BYPRODUCTS "${CMAKE_BINARY_DIR}/Version.txt" "${CMAKE_BINARY_DIR}/Version.hpp" "${CMAKE_BINARY_DIR}/Version.cpp"
+	BYPRODUCTS "${CMAKE_BINARY_DIR}/Version.txt" "${CMAKE_BINARY_DIR}/Version.cpp"
 	COMMENT "Generating version files"
 )
 
