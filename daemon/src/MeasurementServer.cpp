@@ -265,6 +265,8 @@ void MeasurementServer::onMessageReceived(quint16 id, const QByteArray &data)
 				dev->announce(response);
 			}
 
+			g_axiTimer->announce(response);
+
 			writeMessage(m_client, MSG_ID_PROGRAM_PL, response);
 			break;
 		}

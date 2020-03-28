@@ -41,7 +41,15 @@ SimpleTimer::~SimpleTimer()
 
 void SimpleTimer::announce(QByteArray &output) const
 {
-	Q_UNUSED(output);
+	if(!isReady()) return;
+
+	appendAsBytes<uint8_t>(output, m_idx);
+	appendAsBytes<uint8_t>(output, DEV_SIMPLE_TIMER);
+	appendAsBytes<uint16_t>(output, 8);
+
+	appendAsBytes<uint16_t>(output, PROP_CLOCK_FREQ);
+	appendAsBytes<uint16_t>(output, 4);
+	appendAsBytes<uint32_t>(output, 125000000);
 }
 
 DeviceType SimpleTimer::getType() const

@@ -86,7 +86,8 @@ namespace Messages
 		PROP_MAX_TEMPLATE_SIZE,
 		PROP_MAX_SCRIPT_SIZE,
 		PROP_FIFO_SIZE,
-		PROP_PHY_ADDR
+		PROP_PHY_ADDR,
+		PROP_CLOCK_FREQ
 	};
 
 	enum RxStatus
