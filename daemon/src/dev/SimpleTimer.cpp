@@ -28,7 +28,7 @@
 #include <BitstreamManager.hpp>
 
 SimpleTimer::SimpleTimer(const QByteArray &name)
-	: AbstractDevice(name, 0x80000000), m_regs(nullptr), m_regsSize(0)
+	: AbstractDevice(name, 0xFF), m_regs(nullptr), m_regsSize(0)
 { }
 
 SimpleTimer::~SimpleTimer()
