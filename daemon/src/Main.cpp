@@ -72,6 +72,7 @@ int main(int argc, char **argv)
 			case QNetworkInterface::Virtual:
 			{
 				g_discoverySrv.append(new DiscoveryServer(iface));
+				g_discoverySrv.append(new DiscoveryServer(iface, true));
 			}
 
 			default: { }

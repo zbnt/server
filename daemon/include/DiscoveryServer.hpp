@@ -26,18 +26,16 @@
 #include <Messages.hpp>
 #include <MessageReceiver.hpp>
 
-class DiscoveryServer : public QObject, public MessageReceiver
+class DiscoveryServer : public QObject
 {
 public:
-	DiscoveryServer(const QNetworkInterface &iface, QObject *parent = nullptr);
+	DiscoveryServer(const QNetworkInterface &iface, bool ip6 = false, QObject *parent = nullptr);
 	~DiscoveryServer();
 
-	void onMessageReceived(quint16 id, const QByteArray &data);
 	void onReadyRead();
 
 private:
-	bool m_received = false;
-	QByteArray m_validator;
+	bool m_ip6 = false;
 	QNetworkInterface m_iface;
 	QUdpSocket *m_server = nullptr;
 };

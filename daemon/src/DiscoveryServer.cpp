@@ -29,115 +29,93 @@
 
 QVector<DiscoveryServer*> g_discoverySrv;
 
-DiscoveryServer::DiscoveryServer(const QNetworkInterface &iface, QObject *parent)
-	: QObject(parent), m_iface(iface)
+DiscoveryServer::DiscoveryServer(const QNetworkInterface &iface, bool ip6, QObject *parent)
+	: QObject(parent), m_ip6(ip6), m_iface(iface)
 {
 	m_server = new QUdpSocket(this);
 	connect(m_server, &QUdpSocket::readyRead, this, &DiscoveryServer::onReadyRead);
 
-	QHostAddress broadcastAddr;
-
-	for(const QNetworkAddressEntry &address : iface.addressEntries())
+	if(!ip6)
 	{
-		if(address.ip().protocol() == QAbstractSocket::IPv4Protocol)
+		QHostAddress broadcastAddr;
+
+		for(const QNetworkAddressEntry &address : iface.addressEntries())
 		{
-			if(broadcastAddr.isNull() || broadcastAddr.isLinkLocal())
+			if(address.ip().protocol() == QAbstractSocket::IPv4Protocol)
 			{
-				broadcastAddr = address.broadcast();
+				if(broadcastAddr.isNull() || broadcastAddr.isLinkLocal())
+				{
+					broadcastAddr = address.broadcast();
+				}
 			}
 		}
-	}
 
-	if(!broadcastAddr.isNull())
+		if(!broadcastAddr.isNull())
+		{
+			m_server->bind(broadcastAddr, MSG_DISCOVERY_PORT);
+		}
+	}
+	else
 	{
-		m_server->bind(broadcastAddr, MSG_DISCOVERY_PORT);
+		QHostAddress multicastAddr;
+		multicastAddr.setAddress(QString("ff12::%1").arg(MSG_DISCOVERY_PORT));
+		multicastAddr.setScopeId(iface.name());
+
+		m_server->bind(multicastAddr, MSG_DISCOVERY_PORT);
+		m_server->joinMulticastGroup(multicastAddr, iface);
 	}
 }
 
 DiscoveryServer::~DiscoveryServer()
 { }
 
-void DiscoveryServer::onMessageReceived(quint16 id, const QByteArray &data)
-{
-	if(id == MSG_ID_DISCOVERY && data.length() == 8)
-	{
-		m_received = true;
-		m_validator = data;
-	}
-}
-
 void DiscoveryServer::onReadyRead()
 {
 	while(m_server->hasPendingDatagrams())
 	{
 		QNetworkDatagram datagram = m_server->receiveDatagram();
+		QByteArray rx_message = datagram.data();
 
-		m_received = false;
-		handleIncomingData(datagram.data());
-
-		if(m_received)
+		if(rx_message.size() != 16)
 		{
-			QByteArray discoveryResponse, host;
-			QHostAddress ip4, ip6;
-
-			host = QHostInfo::localHostName().toUtf8();
-
-			if(host.length() > 255) host.resize(255);
-
-			for(const QNetworkAddressEntry &address : m_iface.addressEntries())
-			{
-				if(address.ip().protocol() == QAbstractSocket::IPv4Protocol)
-				{
-					if(ip4.isNull() || ip4.isLinkLocal())
-					{
-						ip4 = address.ip();
-					}
-				}
-				else
-				{
-					if(ip6.isNull() && !ip6.isLinkLocal())
-					{
-						ip6 = address.ip();
-					}
-				}
-			}
-
-			if(ip4.isNull() && ip6.isNull()) continue;
-
-			discoveryResponse.append(MSG_MAGIC_IDENTIFIER, 4);
-			appendAsBytes<quint16>(discoveryResponse, MSG_ID_DISCOVERY);
-			appendAsBytes<quint16>(discoveryResponse, 8 + 4 + 16 + 16 + 1 + 4 + 16 + 2 + host.length());
-
-			discoveryResponse.append(m_validator);
-
-			appendAsBytes<quint32>(discoveryResponse, ZBNT_VERSION_INT);
-			discoveryResponse.append(padString(ZBNT_VERSION_PREREL, 16));
-			discoveryResponse.append(padString(ZBNT_VERSION_COMMIT, 16));
-			appendAsBytes<quint8>(discoveryResponse, ZBNT_VERSION_DIRTY);
-
-			if(!ip4.isNull())
-			{
-				appendAsBytes<quint32>(discoveryResponse, ip4.toIPv4Address());
-			}
-			else
-			{
-				discoveryResponse.append(4, '\0');
-			}
-
-			if(!ip6.isNull())
-			{
-				discoveryResponse.append((const char*) ip6.toIPv6Address().c, 16);
-			}
-			else
-			{
-				discoveryResponse.append(16, '\0');
-			}
-
-			appendAsBytes<quint16>(discoveryResponse, g_daemonCfg.port);
-
-			discoveryResponse.append(host);
-
-			m_server->writeDatagram(datagram.makeReply(discoveryResponse));
+			continue;
 		}
+
+		if(!rx_message.startsWith(MSG_MAGIC_IDENTIFIER))
+		{
+			continue;
+		}
+
+		uint16_t messageID = readAsNumber<uint16_t>(rx_message, 4);
+		uint16_t messageSize = readAsNumber<uint16_t>(rx_message, 6);
+
+		if(messageID != MSG_ID_DISCOVERY || messageSize != 8)
+		{
+			continue;
+		}
+
+		rx_message.remove(0, 8);
+
+		QByteArray discoveryResponse, host;
+
+		host = QHostInfo::localHostName().toUtf8();
+		if(host.length() > 255) host.resize(255);
+
+		discoveryResponse.append(MSG_MAGIC_IDENTIFIER, 4);
+		appendAsBytes<quint16>(discoveryResponse, MSG_ID_DISCOVERY);
+		appendAsBytes<quint16>(discoveryResponse, 8 + 4 + 16 + 16 + 1 + 2 + host.length());
+
+		discoveryResponse.append(rx_message);
+
+		appendAsBytes<quint32>(discoveryResponse, ZBNT_VERSION_INT);
+		discoveryResponse.append(padString(ZBNT_VERSION_PREREL, 16));
+		discoveryResponse.append(padString(ZBNT_VERSION_COMMIT, 16));
+		appendAsBytes<quint8>(discoveryResponse, ZBNT_VERSION_DIRTY);
+
+		appendAsBytes<quint16>(discoveryResponse, g_daemonCfg.port);
+
+		discoveryResponse.append(host);
+
+		m_server->writeDatagram(datagram.makeReply(discoveryResponse));
 	}
 }
