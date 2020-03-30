@@ -89,10 +89,12 @@ void MeasurementServer::stopRun()
 
 	g_axiDma->flushFifo();
 
-	while(!g_axiDma->isFifoEmpty())
+	do
 	{
 		QThread::usleep(100);
+		flushDmaBuffer();
 	}
+	while(!g_axiDma->isFifoEmpty());
 
 	g_axiDma->stopTransfer();
 
@@ -142,17 +144,10 @@ void MeasurementServer::pollAxiTimer()
 {
 	if(g_axiTimer && g_axiDma)
 	{
-		if(g_axiTimer->getCurrentTime() >= g_axiTimer->getMaximumTime())
+		if(m_isRunning && g_axiTimer->getCurrentTime() >= g_axiTimer->getMaximumTime())
 		{
-			if(g_axiDma->isFifoEmpty())
-			{
-				qDebug("[net] I: Time limit reached");
-				stopRun();
-			}
-			else
-			{
-				g_axiDma->flushFifo();
-			}
+			qDebug("[net] I: Time limit reached");
+			stopRun();
 		}
 	}
 }
