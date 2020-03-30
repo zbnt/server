@@ -23,7 +23,7 @@
 #include <dev/AbstractDevice.hpp>
 
 #define TGEN_MEM_FRAME_OFFSET   0x0800
-#define TGEN_MEM_PATTERN_OFFSET 0x1000
+#define TGEN_MEM_MASK_OFFSET    0x1000
 #define TGEN_MEM_SIZE           2048
 
 class TrafficGenerator : public AbstractDevice

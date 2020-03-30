@@ -234,9 +234,9 @@ bool TrafficGenerator::setProperty(PropertyID propID, const QByteArray &value)
 			break;
 		}
 
-		case PROP_FRAME_PATTERN:
+		case PROP_FRAME_TEMPLATE_MASK:
 		{
-			uint8_t *ptr = makePointer<uint8_t>(m_regs, TGEN_MEM_PATTERN_OFFSET);
+			uint8_t *ptr = makePointer<uint8_t>(m_regs, TGEN_MEM_MASK_OFFSET);
 
 			for(int i = 0; i < TGEN_MEM_SIZE/8; ++i)
 			{
@@ -320,9 +320,9 @@ bool TrafficGenerator::getProperty(PropertyID propID, const QByteArray &params, 
 			break;
 		}
 
-		case PROP_FRAME_PATTERN:
+		case PROP_FRAME_TEMPLATE_MASK:
 		{
-			char *ptr = makePointer<char>(m_regs, TGEN_MEM_PATTERN_OFFSET);
+			char *ptr = makePointer<char>(m_regs, TGEN_MEM_MASK_OFFSET);
 
 			value.append(ptr, TGEN_MEM_SIZE/8);
 			break;
