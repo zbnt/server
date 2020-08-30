@@ -1,15 +1,14 @@
+# zbnt/server
 
-# zbnt_sw
-
-Board software for ZBNT, a set of network tools for Xilinx FPGAs/SoCs
+Server for controlling ZBNT devices over TCP
 
 ## Related projects
 
-* **Hardware cores and block designs:** [zbnt_hw](https://github.com/zbnt/zbnt_hw)
+* **Hardware cores and block designs:** [zbnt/hardware](https://github.com/zbnt/hardware)
 
 ## Requirements
 
-* Bitstreams for the Programmable Logic (see [zbnt_hw](https://github.com/zbnt/zbnt_hw))
+* Bitstreams for the Programmable Logic (see [zbnt/hardware](https://github.com/zbnt/hardware))
 * A working GNU/Linux system with the following libraries/tools:
 	* Qt5
 	* CMake
@@ -18,20 +17,25 @@ Board software for ZBNT, a set of network tools for Xilinx FPGAs/SoCs
 ## Building
 
 1. Clone this repository, make sure all dependencies are installed before proceeding.
-2. Create a directory for the build and `cd` to it:
+2. Initialize and clone the required submodules:
+
+~~~
+git submodule update --init
+~~~
+
+3. Create a directory for the build and `cd` to it:
 
 ~~~~
-mkdir build
-cd build
+mkdir build && cd build
 ~~~~
 
-3. Run `cmake`, specify which projects to build:
+4. Run `cmake`:
 
 ~~~~
-cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_GUI=ON -DBUILD_DAEMON=ON ..
+cmake -DCMAKE_BUILD_TYPE=Release ..
 ~~~~
 
-4. Run `make`, you can use the `-j` parameter to control the number of parallel jobs:
+5. Run `make`, you can use the `-j` parameter to control the number of parallel jobs:
 
 ~~~
 make -j16
