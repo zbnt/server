@@ -21,8 +21,8 @@
 #include <QThread>
 #include <QNetworkInterface>
 
-#include <Utils.hpp>
 #include <Settings.hpp>
+#include <MessageUtils.hpp>
 #include <BitstreamManager.hpp>
 
 MeasurementServer *g_measurementSrv = nullptr;

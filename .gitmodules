@@ -1,0 +1,3 @@
+[submodule "server-shared"]
+	path = server-shared
+	url = git@github.com:zbnt/server-shared.git

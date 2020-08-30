@@ -22,9 +22,9 @@
 #include <QNetworkDatagram>
 #include <QNetworkInterface>
 
-#include <Utils.hpp>
 #include <Version.hpp>
 #include <Settings.hpp>
+#include <MessageUtils.hpp>
 #include <MeasurementServer.hpp>
 
 QVector<DiscoveryServer*> g_discoverySrv;

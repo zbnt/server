@@ -1,12 +1,13 @@
 cmake_minimum_required(VERSION 3.7)
-project(zbnt_sw)
+project(zbnt_server)
+
+find_package(Qt5 COMPONENTS Core Network REQUIRED)
+find_library(libfdt "libfdt.so")
 
 set(ZBNT_FALLBACK_VERSION "2.0.0-beta.2")
 set(CMAKE_CXX_STANDARD 14)
 
-option(BUILD_GUI      "Build the reference GUI"           ON)
-option(BUILD_DAEMON   "Build the daemon for Zynq devices" OFF)
-option(USE_SANITIZERS "Compile with ASan and UBSan"       OFF)
+option(USE_SANITIZERS "Compile with ASan and UBSan" OFF)
 
 set(CFG_PATH      "/etc/zbnt"              CACHE PATH "Location of configuration files")
 set(FIRMWARE_PATH "/usr/lib/firmware/zbnt" CACHE PATH "Location of bitstream and device tree files")
@@ -29,10 +30,46 @@ add_custom_target(
 	COMMENT "Generating version files"
 )
 
-if(BUILD_GUI)
-	add_subdirectory(gui)
-endif()
+set(ZBNT_SERVER_SRC
+	"src/Main.cpp"
+	"src/FdtUtils.cpp"
+	"src/Settings.cpp"
+	"src/DiscoveryServer.cpp"
+	"src/BitstreamManager.cpp"
+	"src/MeasurementServer.cpp"
 
-if(BUILD_DAEMON)
-	add_subdirectory(daemon)
-endif()
+	"server-shared/src/MessageUtils.cpp"
+	"server-shared/src/MessageReceiver.cpp"
+	"${CMAKE_BINARY_DIR}/Version.cpp"
+
+	"src/dev/AbstractDevice.cpp"
+	"src/dev/AxiDma.cpp"
+	"src/dev/AxiMdio.cpp"
+	"src/dev/DmaBuffer.cpp"
+	"src/dev/SimpleTimer.cpp"
+	"src/dev/FrameDetector.cpp"
+	"src/dev/StatsCollector.cpp"
+	"src/dev/LatencyMeasurer.cpp"
+	"src/dev/TrafficGenerator.cpp"
+)
+
+set_source_files_properties("${CMAKE_BINARY_DIR}/Version.cpp" PROPERTIES GENERATED 1)
+
+add_executable(zbnt_server ${ZBNT_SERVER_SRC})
+add_dependencies(zbnt_server zbnt_genver)
+target_link_libraries(zbnt_server Qt5::Core Qt5::Network ${libfdt} -lpthread)
+target_include_directories(zbnt_server PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/server-shared/include" "${CMAKE_BINARY_DIR}")
+
+target_compile_definitions(
+	zbnt_server PUBLIC
+	ZBNT_CFG_PATH="${CFG_PATH}"
+	ZBNT_FIRMWARE_PATH="${FIRMWARE_PATH}"
+	ZBNT_SYSFS_PATH="${SYSFS_PATH}"
+	ZBNT_CONFIGFS_PATH="${CONFIGFS_PATH}"
+)
+
+install(
+	TARGETS zbnt_server
+	PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_READ WORLD_READ
+	DESTINATION bin
+)

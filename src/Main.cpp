@@ -26,9 +26,9 @@
 #include <QCoreApplication>
 #include <QThread>
 
-#include <Utils.hpp>
 #include <Version.hpp>
 #include <Settings.hpp>
+#include <MessageUtils.hpp>
 #include <DiscoveryServer.hpp>
 #include <BitstreamManager.hpp>
 #include <MeasurementServer.hpp>
