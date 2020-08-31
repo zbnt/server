@@ -117,7 +117,7 @@ void MeasurementServer::stopRun()
 
 	if(m_client)
 	{
-		for(AbstractDevice *dev : g_deviceList)
+		for(AbstractCore *dev : g_deviceList)
 		{
 			QByteArray value;
 
@@ -222,7 +222,7 @@ void MeasurementServer::onMessageReceived(quint16 id, const QByteArray &data)
 			appendAsBytes<uint16_t>(message, activeBitstream.size());
 			message.append(activeBitstream);
 
-			for(const AbstractDevice *dev : g_deviceList)
+			for(const AbstractCore *dev : g_deviceList)
 			{
 				dev->announce(message);
 			}
@@ -257,7 +257,7 @@ void MeasurementServer::onMessageReceived(quint16 id, const QByteArray &data)
 			appendAsBytes<uint16_t>(response, reqBitstream.size());
 			response.append(reqBitstream);
 
-			for(const AbstractDevice *dev : g_deviceList)
+			for(const AbstractCore *dev : g_deviceList)
 			{
 				dev->announce(response);
 			}

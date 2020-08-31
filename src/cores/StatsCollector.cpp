@@ -16,7 +16,7 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <dev/LatencyMeasurer.hpp>
+#include <cores/StatsCollector.hpp>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -27,11 +27,11 @@
 #include <FdtUtils.hpp>
 #include <BitstreamManager.hpp>
 
-LatencyMeasurer::LatencyMeasurer(const QByteArray &name, uint32_t index)
-	: AbstractDevice(name, index), m_regs(nullptr), m_regsSize(0), m_portA(0), m_portB(0)
+StatsCollector::StatsCollector(const QByteArray &name, uint32_t index)
+	: AbstractCore(name, index), m_regs(nullptr), m_regsSize(0), m_port(0)
 { }
 
-LatencyMeasurer::~LatencyMeasurer()
+StatsCollector::~StatsCollector()
 {
 	if(m_regs)
 	{
@@ -39,38 +39,37 @@ LatencyMeasurer::~LatencyMeasurer()
 	}
 }
 
-void LatencyMeasurer::announce(QByteArray &output) const
+void StatsCollector::announce(QByteArray &output) const
 {
 	if(!isReady()) return;
 
 	appendAsBytes<uint8_t>(output, m_idx);
-	appendAsBytes<uint8_t>(output, DEV_LATENCY_MEASURER);
-	appendAsBytes<uint16_t>(output, 6);
+	appendAsBytes<uint8_t>(output, DEV_STATS_COLLECTOR);
+	appendAsBytes<uint16_t>(output, 5);
 
 	appendAsBytes<uint16_t>(output, PROP_PORTS);
-	appendAsBytes<uint16_t>(output, 2);
-	appendAsBytes<uint8_t>(output, m_portA);
-	appendAsBytes<uint8_t>(output, m_portB);
+	appendAsBytes<uint16_t>(output, 1);
+	appendAsBytes<uint8_t>(output, m_port);
 }
 
-DeviceType LatencyMeasurer::getType() const
+DeviceType StatsCollector::getType() const
 {
-	return DEV_LATENCY_MEASURER;
+	return DEV_STATS_COLLECTOR;
 }
 
-uint64_t LatencyMeasurer::getPorts() const
+uint64_t StatsCollector::getPorts() const
 {
-	return (m_portB << 8) | m_portA;
+	return m_port;
 }
 
-bool LatencyMeasurer::isReady() const
+bool StatsCollector::isReady() const
 {
 	return !!m_regs;
 }
 
-bool LatencyMeasurer::loadDevice(const void *fdt, int offset)
+bool StatsCollector::loadDevice(const void *fdt, int offset)
 {
-	if(!fdt || m_regs) return false;
+	if(isReady() || !fdt) return false;
 
 	quintptr base;
 
@@ -80,7 +79,7 @@ bool LatencyMeasurer::loadDevice(const void *fdt, int offset)
 		return false;
 	}
 
-	if(!fdtGetArrayProp(fdt, offset, "zbnt,ports", m_portA, m_portB))
+	if(!fdtGetArrayProp(fdt, offset, "zbnt,ports", m_port))
 	{
 		qCritical("[dev] E: Device %s doesn't have a valid zbnt,ports property.", m_name.constData());
 		return false;
@@ -96,7 +95,7 @@ bool LatencyMeasurer::loadDevice(const void *fdt, int offset)
 		return false;
 	}
 
-	qDebug("[dev] D: Found %s in %s, connected to eth%u and eth%u.", m_name.constData(), it->constData(), m_portA, m_portB);
+	qDebug("[dev] D: Found %s in %s, connected to eth%u.", m_name.constData(), it->constData(), m_port);
 
 	// Open memory map
 
@@ -118,17 +117,15 @@ bool LatencyMeasurer::loadDevice(const void *fdt, int offset)
 		return false;
 	}
 
-	m_regs->config = 0;
-	m_regs->padding = 18;
-	m_regs->timeout = 125000000;
-	m_regs->delay = 12500000;
+	m_regs->config = CFG_LOG_ENABLE | CFG_ENABLE;
+	m_regs->sample_period = 12500000;
 	m_regs->log_identifier = m_idx | MSG_ID_MEASUREMENT;
 
 	close(fd);
 	return true;
 }
 
-void LatencyMeasurer::setReset(bool reset)
+void StatsCollector::setReset(bool reset)
 {
 	if(!isReady()) return;
 
@@ -142,7 +139,7 @@ void LatencyMeasurer::setReset(bool reset)
 	}
 }
 
-bool LatencyMeasurer::setProperty(PropertyID propID, const QByteArray &value)
+bool StatsCollector::setProperty(PropertyID propID, const QByteArray &value)
 {
 	if(!isReady()) return false;
 
@@ -172,80 +169,11 @@ bool LatencyMeasurer::setProperty(PropertyID propID, const QByteArray &value)
 			break;
 		}
 
-		case PROP_ENABLE_BROADCAST:
-		{
-			if(value.length() < 1) return false;
-
-			if(readAsNumber<uint8_t>(value, 0))
-			{
-				m_regs->config |= CFG_BROADCAST;
-			}
-			else
-			{
-				m_regs->config &= ~CFG_BROADCAST;
-			}
-
-			break;
-		}
-
-		case PROP_MAC_ADDR:
-		{
-			if(value.length() < 7) return false;
-
-			uint8_t idx = value[0] & 1;
-			uint16_t cfg = m_regs->config;
-			volatile uint8_t *ptr = idx ? m_regs->mac_addr_b : m_regs->mac_addr_a;
-
-			m_regs->config = cfg & ~CFG_ENABLE;
-
-			for(int i = 0, j = 1; i < 6; ++i, ++j)
-			{
-				ptr[i] = value[j];
-			}
-
-			m_regs->config = cfg;
-			break;
-		}
-
-		case PROP_IP_ADDR:
-		{
-			if(value.length() < 5) return false;
-
-			uint8_t idx = value[0] & 1;
-
-			if(!idx)
-			{
-				m_regs->ip_addr_a = readAsNumber<uint32_t>(value, 1);
-			}
-			else
-			{
-				m_regs->ip_addr_b = readAsNumber<uint32_t>(value, 1);
-			}
-
-			break;
-		}
-
-		case PROP_FRAME_PADDING:
-		{
-			if(value.length() < 2) return false;
-
-			m_regs->padding = readAsNumber<uint16_t>(value, 0);
-			break;
-		}
-
-		case PROP_FRAME_GAP:
+		case PROP_SAMPLE_PERIOD:
 		{
 			if(value.length() < 4) return false;
 
-			m_regs->delay = readAsNumber<uint32_t>(value, 0);
-			break;
-		}
-
-		case PROP_TIMEOUT:
-		{
-			if(value.length() < 4) return false;
-
-			m_regs->timeout = readAsNumber<uint32_t>(value, 0);
+			m_regs->sample_period = readAsNumber<uint32_t>(value, 0);
 			break;
 		}
 
@@ -264,7 +192,7 @@ bool LatencyMeasurer::setProperty(PropertyID propID, const QByteArray &value)
 	return true;
 }
 
-bool LatencyMeasurer::getProperty(PropertyID propID, const QByteArray &params, QByteArray &value)
+bool StatsCollector::getProperty(PropertyID propID, const QByteArray &params, QByteArray &value)
 {
 	if(!isReady()) return false;
 
@@ -284,41 +212,9 @@ bool LatencyMeasurer::getProperty(PropertyID propID, const QByteArray &params, Q
 			break;
 		}
 
-		case PROP_ENABLE_BROADCAST:
+		case PROP_SAMPLE_PERIOD:
 		{
-			appendAsBytes<uint8_t>(value, !!(m_regs->config & CFG_BROADCAST));
-			break;
-		}
-
-		case PROP_MAC_ADDR:
-		{
-			value.append((char*) m_regs->mac_addr_a, 6);
-			value.append((char*) m_regs->mac_addr_b, 6);
-			break;
-		}
-
-		case PROP_IP_ADDR:
-		{
-			appendAsBytes(value, m_regs->ip_addr_a);
-			appendAsBytes(value, m_regs->ip_addr_b);
-			break;
-		}
-
-		case PROP_FRAME_PADDING:
-		{
-			appendAsBytes<uint16_t>(value, m_regs->padding);
-			break;
-		}
-
-		case PROP_FRAME_GAP:
-		{
-			appendAsBytes(value, m_regs->delay);
-			break;
-		}
-
-		case PROP_TIMEOUT:
-		{
-			appendAsBytes(value, m_regs->timeout);
+			appendAsBytes(value, m_regs->sample_period);
 			break;
 		}
 

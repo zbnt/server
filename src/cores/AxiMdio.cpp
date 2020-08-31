@@ -16,7 +16,7 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <dev/AxiMdio.hpp>
+#include <cores/AxiMdio.hpp>
 
 #include <poll.h>
 #include <unistd.h>
@@ -29,7 +29,7 @@
 #include <BitstreamManager.hpp>
 
 AxiMdio::AxiMdio(const QByteArray &name, uint32_t index)
-	: AbstractDevice(name, index), m_regs(nullptr), m_regsSize(0)
+	: AbstractCore(name, index), m_regs(nullptr), m_regsSize(0)
 { }
 
 AxiMdio::~AxiMdio()

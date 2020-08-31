@@ -23,7 +23,7 @@ else()
 endif()
 
 add_custom_target(
-	zbnt_genver ALL
+	gen_version ALL
 	COMMAND "python3" "cmake/GenerateVersion.py" "${CMAKE_BINARY_DIR}" "${ZBNT_FALLBACK_VERSION}"
 	WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
 	BYPRODUCTS "${CMAKE_BINARY_DIR}/Version.txt" "${CMAKE_BINARY_DIR}/Version.cpp"
@@ -42,21 +42,21 @@ set(ZBNT_SERVER_SRC
 	"server-shared/src/MessageReceiver.cpp"
 	"${CMAKE_BINARY_DIR}/Version.cpp"
 
-	"src/dev/AbstractDevice.cpp"
-	"src/dev/AxiDma.cpp"
-	"src/dev/AxiMdio.cpp"
-	"src/dev/DmaBuffer.cpp"
-	"src/dev/SimpleTimer.cpp"
-	"src/dev/FrameDetector.cpp"
-	"src/dev/StatsCollector.cpp"
-	"src/dev/LatencyMeasurer.cpp"
-	"src/dev/TrafficGenerator.cpp"
+	"src/cores/AbstractCore.cpp"
+	"src/cores/AxiDma.cpp"
+	"src/cores/AxiMdio.cpp"
+	"src/cores/DmaBuffer.cpp"
+	"src/cores/SimpleTimer.cpp"
+	"src/cores/FrameDetector.cpp"
+	"src/cores/StatsCollector.cpp"
+	"src/cores/LatencyMeasurer.cpp"
+	"src/cores/TrafficGenerator.cpp"
 )
 
 set_source_files_properties("${CMAKE_BINARY_DIR}/Version.cpp" PROPERTIES GENERATED 1)
 
 add_executable(zbnt_server ${ZBNT_SERVER_SRC})
-add_dependencies(zbnt_server zbnt_genver)
+add_dependencies(zbnt_server gen_version)
 target_link_libraries(zbnt_server Qt5::Core Qt5::Network ${libfdt} -lpthread)
 target_include_directories(zbnt_server PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/server-shared/include" "${CMAKE_BINARY_DIR}")
 

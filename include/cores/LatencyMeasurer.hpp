@@ -20,37 +20,43 @@
 
 #include <cstdint>
 
-#include <dev/AbstractDevice.hpp>
+#include <cores/AbstractCore.hpp>
 
-class FrameDetector : public AbstractDevice
+class LatencyMeasurer : public AbstractCore
 {
 public:
 	static constexpr uint32_t CFG_ENABLE     = 1;
 	static constexpr uint32_t CFG_RESET      = 2;
-	static constexpr uint32_t CFG_LOG_ENABLE = 4;
-
-	static constexpr uint32_t HAS_CMP_UNIT   = 1;
-	static constexpr uint32_t HAS_EDIT_UNIT  = 2;
-	static constexpr uint32_t HAS_CSUM_UNIT  = 4;
+	static constexpr uint32_t CFG_HOLD       = 4;
+	static constexpr uint32_t CFG_LOG_ENABLE = 8;
+	static constexpr uint32_t CFG_BROADCAST  = 16;
 
 	struct Registers
 	{
 		uint16_t config;
 		uint16_t log_identifier;
-		uint32_t script_enable;
-		uint32_t features;
-		uint32_t num_scripts;
-		uint32_t max_script_size;
-		uint32_t script_mem_offset;
-		uint32_t tx_fifo_size;
-		uint32_t extr_fifo_size;
-		uint64_t overflow_count_a;
-		uint64_t overflow_count_b;
+
+		uint8_t mac_addr_a[6];
+		uint8_t mac_addr_b[6];
+		uint32_t ip_addr_a;
+		uint32_t ip_addr_b;
+
+		uint32_t padding;
+		uint32_t delay;
+		uint32_t timeout;
+		uint32_t _reserved;
+		uint64_t overflow_count;
+
+		uint64_t ping_pong_good;
+		uint32_t ping_latency;
+		uint32_t pong_latency;
+		uint64_t pings_lost;
+		uint64_t pongs_lost;
 	};
 
 public:
-	FrameDetector(const QByteArray &name, uint32_t index);
-	~FrameDetector();
+	LatencyMeasurer(const QByteArray &name, uint32_t index);
+	~LatencyMeasurer();
 
 	void announce(QByteArray &output) const;
 
@@ -69,5 +75,4 @@ private:
 	size_t m_regsSize;
 
 	uint8_t m_portA, m_portB;
-	QVector<QByteArray> m_scriptNames;
 };

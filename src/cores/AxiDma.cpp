@@ -16,7 +16,7 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <dev/AxiDma.hpp>
+#include <cores/AxiDma.hpp>
 
 #include <poll.h>
 #include <unistd.h>
@@ -28,10 +28,10 @@
 #include <FdtUtils.hpp>
 #include <BitstreamManager.hpp>
 
-#include <dev/DmaBuffer.hpp>
+#include <cores/DmaBuffer.hpp>
 
 AxiDma::AxiDma(const QByteArray &name)
-	: AbstractDevice(name, 0x80000000), m_regs(nullptr), m_regsSize(0), m_irq(0), m_fd(-1)
+	: AbstractCore(name, 0x80000000), m_regs(nullptr), m_regsSize(0), m_irq(0), m_fd(-1)
 { }
 
 AxiDma::~AxiDma()

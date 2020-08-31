@@ -20,43 +20,34 @@
 
 #include <cstdint>
 
-#include <dev/AbstractDevice.hpp>
+#include <cores/AbstractCore.hpp>
 
-class LatencyMeasurer : public AbstractDevice
+#define TGEN_MEM_FRAME_OFFSET   0x0800
+#define TGEN_MEM_MASK_OFFSET    0x1000
+#define TGEN_MEM_SIZE           2048
+
+class TrafficGenerator : public AbstractCore
 {
 public:
-	static constexpr uint32_t CFG_ENABLE     = 1;
-	static constexpr uint32_t CFG_RESET      = 2;
-	static constexpr uint32_t CFG_HOLD       = 4;
-	static constexpr uint32_t CFG_LOG_ENABLE = 8;
-	static constexpr uint32_t CFG_BROADCAST  = 16;
+	static constexpr uint32_t CFG_ENABLE   = 1;
+	static constexpr uint32_t CFG_RESET    = 2;
+	static constexpr uint32_t CFG_BURST    = 4;
+	static constexpr uint32_t CFG_SEED_REQ = 8;
 
 	struct Registers
 	{
-		uint16_t config;
-		uint16_t log_identifier;
-
-		uint8_t mac_addr_a[6];
-		uint8_t mac_addr_b[6];
-		uint32_t ip_addr_a;
-		uint32_t ip_addr_b;
-
-		uint32_t padding;
-		uint32_t delay;
-		uint32_t timeout;
-		uint32_t _reserved;
-		uint64_t overflow_count;
-
-		uint64_t ping_pong_good;
-		uint32_t ping_latency;
-		uint32_t pong_latency;
-		uint64_t pings_lost;
-		uint64_t pongs_lost;
+		uint32_t config;
+		uint32_t status;
+		uint32_t fsize;
+		uint32_t fdelay;
+		uint16_t burst_time_on;
+		uint16_t burst_time_off;
+		uint8_t lfsr_seed_val;
 	};
 
 public:
-	LatencyMeasurer(const QByteArray &name, uint32_t index);
-	~LatencyMeasurer();
+	TrafficGenerator(const QByteArray &name, uint32_t index);
+	~TrafficGenerator();
 
 	void announce(QByteArray &output) const;
 
@@ -74,5 +65,5 @@ private:
 	volatile Registers *m_regs;
 	size_t m_regsSize;
 
-	uint8_t m_portA, m_portB;
+	uint8_t m_port;
 };

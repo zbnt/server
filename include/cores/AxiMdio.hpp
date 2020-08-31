@@ -20,9 +20,9 @@
 
 #include <cstdint>
 
-#include <dev/AbstractDevice.hpp>
+#include <cores/AbstractCore.hpp>
 
-class AxiMdio : public AbstractDevice
+class AxiMdio : public AbstractCore
 {
 public:
 	static constexpr uint32_t CTL_START      = 1;

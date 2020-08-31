@@ -16,26 +16,26 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <dev/AbstractDevice.hpp>
+#include <cores/AbstractCore.hpp>
 
-AbstractDevice::AbstractDevice(const QByteArray &name, uint32_t index)
+AbstractCore::AbstractCore(const QByteArray &name, uint32_t index)
 	: m_name(name), m_idx(index)
 { }
 
-AbstractDevice::~AbstractDevice()
+AbstractCore::~AbstractCore()
 { }
 
-const QByteArray &AbstractDevice::getName() const
+const QByteArray &AbstractCore::getName() const
 {
 	return m_name;
 }
 
-uint32_t AbstractDevice::getIndex() const
+uint32_t AbstractCore::getIndex() const
 {
 	return m_idx;
 }
 
-uint64_t AbstractDevice::getPorts() const
+uint64_t AbstractCore::getPorts() const
 {
 	return 0;
 }

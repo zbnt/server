@@ -16,7 +16,7 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <dev/StatsCollector.hpp>
+#include <cores/SimpleTimer.hpp>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -27,11 +27,11 @@
 #include <FdtUtils.hpp>
 #include <BitstreamManager.hpp>
 
-StatsCollector::StatsCollector(const QByteArray &name, uint32_t index)
-	: AbstractDevice(name, index), m_regs(nullptr), m_regsSize(0), m_port(0)
+SimpleTimer::SimpleTimer(const QByteArray &name)
+	: AbstractCore(name, 0xFF), m_regs(nullptr), m_regsSize(0)
 { }
 
-StatsCollector::~StatsCollector()
+SimpleTimer::~SimpleTimer()
 {
 	if(m_regs)
 	{
@@ -39,35 +39,30 @@ StatsCollector::~StatsCollector()
 	}
 }
 
-void StatsCollector::announce(QByteArray &output) const
+void SimpleTimer::announce(QByteArray &output) const
 {
 	if(!isReady()) return;
 
 	appendAsBytes<uint8_t>(output, m_idx);
-	appendAsBytes<uint8_t>(output, DEV_STATS_COLLECTOR);
-	appendAsBytes<uint16_t>(output, 5);
+	appendAsBytes<uint8_t>(output, DEV_SIMPLE_TIMER);
+	appendAsBytes<uint16_t>(output, 8);
 
-	appendAsBytes<uint16_t>(output, PROP_PORTS);
-	appendAsBytes<uint16_t>(output, 1);
-	appendAsBytes<uint8_t>(output, m_port);
+	appendAsBytes<uint16_t>(output, PROP_CLOCK_FREQ);
+	appendAsBytes<uint16_t>(output, 4);
+	appendAsBytes<uint32_t>(output, 125000000);
 }
 
-DeviceType StatsCollector::getType() const
+DeviceType SimpleTimer::getType() const
 {
-	return DEV_STATS_COLLECTOR;
+	return DEV_SIMPLE_TIMER;
 }
 
-uint64_t StatsCollector::getPorts() const
-{
-	return m_port;
-}
-
-bool StatsCollector::isReady() const
+bool SimpleTimer::isReady() const
 {
 	return !!m_regs;
 }
 
-bool StatsCollector::loadDevice(const void *fdt, int offset)
+bool SimpleTimer::loadDevice(const void *fdt, int offset)
 {
 	if(isReady() || !fdt) return false;
 
@@ -76,12 +71,6 @@ bool StatsCollector::loadDevice(const void *fdt, int offset)
 	if(!fdtGetArrayProp(fdt, offset, "reg", base, m_regsSize))
 	{
 		qCritical("[dev] E: Device %s doesn't have a valid reg property.", m_name.constData());
-		return false;
-	}
-
-	if(!fdtGetArrayProp(fdt, offset, "zbnt,ports", m_port))
-	{
-		qCritical("[dev] E: Device %s doesn't have a valid zbnt,ports property.", m_name.constData());
 		return false;
 	}
 
@@ -95,7 +84,7 @@ bool StatsCollector::loadDevice(const void *fdt, int offset)
 		return false;
 	}
 
-	qDebug("[dev] D: Found %s in %s, connected to eth%u.", m_name.constData(), it->constData(), m_port);
+	qDebug("[dev] D: Found %s in %s.", m_name.constData(), it->constData());
 
 	// Open memory map
 
@@ -117,15 +106,23 @@ bool StatsCollector::loadDevice(const void *fdt, int offset)
 		return false;
 	}
 
-	m_regs->config = CFG_LOG_ENABLE | CFG_ENABLE;
-	m_regs->sample_period = 12500000;
-	m_regs->log_identifier = m_idx | MSG_ID_MEASUREMENT;
+	m_regs->max_time = 125'000'000;
 
 	close(fd);
 	return true;
 }
 
-void StatsCollector::setReset(bool reset)
+void SimpleTimer::setRunning(bool running)
+{
+	m_regs->config = (m_regs->config & ~CFG_ENABLE) | (running & CFG_ENABLE);
+}
+
+void SimpleTimer::setMaximumTime(uint64_t time)
+{
+	m_regs->max_time = time;
+}
+
+void SimpleTimer::setReset(bool reset)
 {
 	if(!isReady()) return;
 
@@ -139,7 +136,7 @@ void StatsCollector::setReset(bool reset)
 	}
 }
 
-bool StatsCollector::setProperty(PropertyID propID, const QByteArray &value)
+bool SimpleTimer::setProperty(PropertyID propID, const QByteArray &value)
 {
 	if(!isReady()) return false;
 
@@ -149,37 +146,34 @@ bool StatsCollector::setProperty(PropertyID propID, const QByteArray &value)
 		{
 			if(value.length() < 1) return false;
 
-			m_regs->config = (m_regs->config & ~CFG_ENABLE) | (readAsNumber<uint8_t>(value, 0) & CFG_ENABLE);
-			break;
-		}
+			uint8_t enable = readAsNumber<uint8_t>(value, 0);
+			m_regs->config = (m_regs->config & ~CFG_ENABLE) | (enable & CFG_ENABLE);
 
-		case PROP_ENABLE_LOG:
-		{
-			if(value.length() < 1) return false;
-
-			if(readAsNumber<uint8_t>(value, 0))
+			if(!enable)
 			{
-				m_regs->config |= CFG_LOG_ENABLE;
-			}
-			else
-			{
-				m_regs->config &= ~CFG_LOG_ENABLE;
+				m_regs->current_time = 0;
 			}
 
 			break;
 		}
 
-		case PROP_SAMPLE_PERIOD:
+		case PROP_TIMER_MODE:
 		{
-			if(value.length() < 4) return false;
-
-			m_regs->sample_period = readAsNumber<uint32_t>(value, 0);
+			// RESERVED
 			break;
 		}
 
-		case PROP_OVERFLOW_COUNT:
+		case PROP_TIMER_TIME:
 		{
 			// read-only
+			break;
+		}
+
+		case PROP_TIMER_LIMIT:
+		{
+			if(value.length() < 8) return false;
+
+			m_regs->max_time = readAsNumber<uint64_t>(value, 0);
 			break;
 		}
 
@@ -192,7 +186,7 @@ bool StatsCollector::setProperty(PropertyID propID, const QByteArray &value)
 	return true;
 }
 
-bool StatsCollector::getProperty(PropertyID propID, const QByteArray &params, QByteArray &value)
+bool SimpleTimer::getProperty(PropertyID propID, const QByteArray &params, QByteArray &value)
 {
 	if(!isReady()) return false;
 
@@ -206,21 +200,21 @@ bool StatsCollector::getProperty(PropertyID propID, const QByteArray &params, QB
 			break;
 		}
 
-		case PROP_ENABLE_LOG:
+		case PROP_TIMER_MODE:
 		{
-			appendAsBytes<uint8_t>(value, !!(m_regs->config & CFG_LOG_ENABLE));
+			// RESERVED
 			break;
 		}
 
-		case PROP_SAMPLE_PERIOD:
+		case PROP_TIMER_TIME:
 		{
-			appendAsBytes(value, m_regs->sample_period);
+			appendAsBytes(value, m_regs->current_time);
 			break;
 		}
 
-		case PROP_OVERFLOW_COUNT:
+		case PROP_TIMER_LIMIT:
 		{
-			appendAsBytes(value, m_regs->overflow_count);
+			appendAsBytes(value, m_regs->max_time);
 			break;
 		}
 
@@ -231,4 +225,14 @@ bool StatsCollector::getProperty(PropertyID propID, const QByteArray &params, QB
 	}
 
 	return true;
+}
+
+uint64_t SimpleTimer::getCurrentTime() const
+{
+	return m_regs->current_time;
+}
+
+uint64_t SimpleTimer::getMaximumTime() const
+{
+	return m_regs->max_time;
 }

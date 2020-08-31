@@ -20,36 +20,44 @@
 
 #include <cstdint>
 
-#include <QAbstractSocket>
+#include <cores/AbstractCore.hpp>
 
-#include <dev/AbstractDevice.hpp>
-
-class DmaBuffer : public AbstractDevice
+class SimpleTimer : public AbstractCore
 {
 public:
-	DmaBuffer(const QByteArray &name);
-	~DmaBuffer();
+	static constexpr uint32_t CFG_ENABLE = 1;
+	static constexpr uint32_t CFG_RESET  = 2;
+
+	struct Registers
+	{
+		uint32_t config;
+		uint32_t status;
+
+		uint64_t max_time;
+		uint64_t current_time;
+	};
+
+public:
+	SimpleTimer(const QByteArray &name);
+	~SimpleTimer();
 
 	void announce(QByteArray &output) const;
 
 	DeviceType getType() const;
-	const char *getVirtAddr() const;
-	uint64_t getPhysAddr() const;
-	size_t getMemSize() const;
 
 	bool isReady() const;
 	bool loadDevice(const void *fdt, int offset);
 
-	void appendBuffer(QByteArray &out) const;
-	void sendBuffer(QAbstractSocket *thread) const;
+	void setRunning(bool running);
+	void setMaximumTime(uint64_t time);
 
 	void setReset(bool reset);
 	bool setProperty(PropertyID propID, const QByteArray &value);
 	bool getProperty(PropertyID propID, const QByteArray &params, QByteArray &value);
+	uint64_t getCurrentTime() const;
+	uint64_t getMaximumTime() const;
 
 private:
-	uint8_t *m_ptr;
-	uint64_t m_physAddr;
-	size_t m_memSize;
+	volatile Registers *m_regs;
+	size_t m_regsSize;
 };
-

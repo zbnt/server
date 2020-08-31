@@ -29,15 +29,14 @@
 
 #include <FdtUtils.hpp>
 #include <Settings.hpp>
-#include <dev/AxiDma.hpp>
-#include <dev/AxiMdio.hpp>
-#include <dev/DmaBuffer.hpp>
-#include <dev/SimpleTimer.hpp>
-#include <dev/FrameDetector.hpp>
-#include <dev/AbstractDevice.hpp>
-#include <dev/StatsCollector.hpp>
-#include <dev/LatencyMeasurer.hpp>
-#include <dev/TrafficGenerator.hpp>
+#include <cores/AxiDma.hpp>
+#include <cores/AxiMdio.hpp>
+#include <cores/DmaBuffer.hpp>
+#include <cores/SimpleTimer.hpp>
+#include <cores/FrameDetector.hpp>
+#include <cores/StatsCollector.hpp>
+#include <cores/LatencyMeasurer.hpp>
+#include <cores/TrafficGenerator.hpp>
 
 QString g_activeBitstream;
 QVector<QString> g_bitstreamList;
@@ -46,7 +45,7 @@ QHash<QByteArray, QByteArray> g_uioMap;
 AxiDma *g_axiDma = nullptr;
 DmaBuffer *g_dmaBuffer = nullptr;
 SimpleTimer *g_axiTimer = nullptr;
-QVector<AbstractDevice*> g_deviceList;
+QVector<AbstractCore*> g_deviceList;
 
 void initBitstreamManager()
 {
@@ -115,7 +114,7 @@ bool loadBitstream(const QString &bitstreamName)
 		g_dmaBuffer = nullptr;
 	}
 
-	for(const AbstractDevice *dev : g_deviceList)
+	for(const AbstractCore *dev : g_deviceList)
 	{
 		delete dev;
 	}

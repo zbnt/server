@@ -16,7 +16,7 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <dev/FrameDetector.hpp>
+#include <cores/LatencyMeasurer.hpp>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -27,11 +27,11 @@
 #include <FdtUtils.hpp>
 #include <BitstreamManager.hpp>
 
-FrameDetector::FrameDetector(const QByteArray &name, uint32_t index)
-	: AbstractDevice(name, index), m_regs(nullptr), m_regsSize(0), m_portA(0), m_portB(0)
+LatencyMeasurer::LatencyMeasurer(const QByteArray &name, uint32_t index)
+	: AbstractCore(name, index), m_regs(nullptr), m_regsSize(0), m_portA(0), m_portB(0)
 { }
 
-FrameDetector::~FrameDetector()
+LatencyMeasurer::~LatencyMeasurer()
 {
 	if(m_regs)
 	{
@@ -39,53 +39,36 @@ FrameDetector::~FrameDetector()
 	}
 }
 
-void FrameDetector::announce(QByteArray &output) const
+void LatencyMeasurer::announce(QByteArray &output) const
 {
 	if(!isReady()) return;
 
 	appendAsBytes<uint8_t>(output, m_idx);
-	appendAsBytes<uint8_t>(output, DEV_FRAME_DETECTOR);
-	appendAsBytes<uint16_t>(output, 42);
+	appendAsBytes<uint8_t>(output, DEV_LATENCY_MEASURER);
+	appendAsBytes<uint16_t>(output, 6);
 
 	appendAsBytes<uint16_t>(output, PROP_PORTS);
 	appendAsBytes<uint16_t>(output, 2);
 	appendAsBytes<uint8_t>(output, m_portA);
 	appendAsBytes<uint8_t>(output, m_portB);
-
-	appendAsBytes<uint16_t>(output, PROP_FEATURE_BITS);
-	appendAsBytes<uint16_t>(output, 4);
-	appendAsBytes<uint32_t>(output, m_regs->features);
-
-	appendAsBytes<uint16_t>(output, PROP_NUM_SCRIPTS);
-	appendAsBytes<uint16_t>(output, 4);
-	appendAsBytes<uint32_t>(output, m_regs->num_scripts);
-
-	appendAsBytes<uint16_t>(output, PROP_MAX_SCRIPT_SIZE);
-	appendAsBytes<uint16_t>(output, 4);
-	appendAsBytes<uint32_t>(output, m_regs->max_script_size);
-
-	appendAsBytes<uint16_t>(output, PROP_FIFO_SIZE);
-	appendAsBytes<uint16_t>(output, 8);
-	appendAsBytes<uint32_t>(output, m_regs->tx_fifo_size);
-	appendAsBytes<uint32_t>(output, m_regs->extr_fifo_size);
 }
 
-DeviceType FrameDetector::getType() const
+DeviceType LatencyMeasurer::getType() const
 {
-	return DEV_FRAME_DETECTOR;
+	return DEV_LATENCY_MEASURER;
 }
 
-uint64_t FrameDetector::getPorts() const
+uint64_t LatencyMeasurer::getPorts() const
 {
 	return (m_portB << 8) | m_portA;
 }
 
-bool FrameDetector::isReady() const
+bool LatencyMeasurer::isReady() const
 {
 	return !!m_regs;
 }
 
-bool FrameDetector::loadDevice(const void *fdt, int offset)
+bool LatencyMeasurer::loadDevice(const void *fdt, int offset)
 {
 	if(!fdt || m_regs) return false;
 
@@ -135,15 +118,17 @@ bool FrameDetector::loadDevice(const void *fdt, int offset)
 		return false;
 	}
 
-	m_regs->config = CFG_LOG_ENABLE | CFG_ENABLE;
+	m_regs->config = 0;
+	m_regs->padding = 18;
+	m_regs->timeout = 125000000;
+	m_regs->delay = 12500000;
 	m_regs->log_identifier = m_idx | MSG_ID_MEASUREMENT;
-	m_scriptNames.fill("", 2*m_regs->num_scripts);
 
 	close(fd);
 	return true;
 }
 
-void FrameDetector::setReset(bool reset)
+void LatencyMeasurer::setReset(bool reset)
 {
 	if(!isReady()) return;
 
@@ -157,7 +142,7 @@ void FrameDetector::setReset(bool reset)
 	}
 }
 
-bool FrameDetector::setProperty(PropertyID propID, const QByteArray &value)
+bool LatencyMeasurer::setProperty(PropertyID propID, const QByteArray &value)
 {
 	if(!isReady()) return false;
 
@@ -187,58 +172,86 @@ bool FrameDetector::setProperty(PropertyID propID, const QByteArray &value)
 			break;
 		}
 
-		case PROP_ENABLE_SCRIPT:
+		case PROP_ENABLE_BROADCAST:
+		{
+			if(value.length() < 1) return false;
+
+			if(readAsNumber<uint8_t>(value, 0))
+			{
+				m_regs->config |= CFG_BROADCAST;
+			}
+			else
+			{
+				m_regs->config &= ~CFG_BROADCAST;
+			}
+
+			break;
+		}
+
+		case PROP_MAC_ADDR:
+		{
+			if(value.length() < 7) return false;
+
+			uint8_t idx = value[0] & 1;
+			uint16_t cfg = m_regs->config;
+			volatile uint8_t *ptr = idx ? m_regs->mac_addr_b : m_regs->mac_addr_a;
+
+			m_regs->config = cfg & ~CFG_ENABLE;
+
+			for(int i = 0, j = 1; i < 6; ++i, ++j)
+			{
+				ptr[i] = value[j];
+			}
+
+			m_regs->config = cfg;
+			break;
+		}
+
+		case PROP_IP_ADDR:
+		{
+			if(value.length() < 5) return false;
+
+			uint8_t idx = value[0] & 1;
+
+			if(!idx)
+			{
+				m_regs->ip_addr_a = readAsNumber<uint32_t>(value, 1);
+			}
+			else
+			{
+				m_regs->ip_addr_b = readAsNumber<uint32_t>(value, 1);
+			}
+
+			break;
+		}
+
+		case PROP_FRAME_PADDING:
+		{
+			if(value.length() < 2) return false;
+
+			m_regs->padding = readAsNumber<uint16_t>(value, 0);
+			break;
+		}
+
+		case PROP_FRAME_GAP:
 		{
 			if(value.length() < 4) return false;
 
-			m_regs->script_enable = readAsNumber<uint32_t>(value, 0);
+			m_regs->delay = readAsNumber<uint32_t>(value, 0);
+			break;
+		}
+
+		case PROP_TIMEOUT:
+		{
+			if(value.length() < 4) return false;
+
+			m_regs->timeout = readAsNumber<uint32_t>(value, 0);
 			break;
 		}
 
 		case PROP_OVERFLOW_COUNT:
 		{
 			// read-only
-			break;
-		}
-
-		case PROP_FRAME_SCRIPT:
-		{
-			if(value.length() < 4) return false;
-			if(value.length() % 4) return false;
-
-			uint32_t idx = readAsNumber<uint32_t>(value, 0);
-			if(idx >= 2*m_regs->num_scripts) return false;
-
-			uint32_t mask = 1 << idx;
-			uint32_t enable = m_regs->script_enable;
-			uint32_t *ptr = makePointer<uint32_t>(m_regs, m_regs->script_mem_offset + 4 * idx * m_regs->max_script_size);
-
-			m_regs->script_enable = enable & ~mask;
-
-			for(int i = 0, j = 4, k = m_regs->max_script_size; i < k; ++i, j += 4)
-			{
-				if(j < value.length())
-				{
-					ptr[i] = readAsNumber<uint32_t>(value, j);
-				}
-				else
-				{
-					ptr[i] = 0;
-				}
-			}
-
-			m_regs->script_enable = enable;
-			break;
-		}
-
-		case PROP_FRAME_SCRIPT_NAME:
-		{
-			if(value.length() < 4) return false;
-
-			uint32_t idx = readAsNumber<uint32_t>(value, 0);
-			if(idx >= 2*m_regs->num_scripts) return false;
-
-			m_scriptNames[idx] = value.mid(4, -1);
 			break;
 		}
 
@@ -251,9 +264,11 @@ bool FrameDetector::setProperty(PropertyID propID, const QByteArray &value)
 	return true;
 }
 
-bool FrameDetector::getProperty(PropertyID propID, const QByteArray &params, QByteArray &value)
+bool LatencyMeasurer::getProperty(PropertyID propID, const QByteArray &params, QByteArray &value)
 {
 	if(!isReady()) return false;
+
+	Q_UNUSED(params);
 
 	switch(propID)
 	{
@@ -269,44 +284,47 @@ bool FrameDetector::getProperty(PropertyID propID, const QByteArray &params, QBy
 			break;
 		}
 
-		case PROP_ENABLE_SCRIPT:
+		case PROP_ENABLE_BROADCAST:
 		{
-			appendAsBytes(value, m_regs->script_enable);
+			appendAsBytes<uint8_t>(value, !!(m_regs->config & CFG_BROADCAST));
+			break;
+		}
+
+		case PROP_MAC_ADDR:
+		{
+			value.append((char*) m_regs->mac_addr_a, 6);
+			value.append((char*) m_regs->mac_addr_b, 6);
+			break;
+		}
+
+		case PROP_IP_ADDR:
+		{
+			appendAsBytes(value, m_regs->ip_addr_a);
+			appendAsBytes(value, m_regs->ip_addr_b);
+			break;
+		}
+
+		case PROP_FRAME_PADDING:
+		{
+			appendAsBytes<uint16_t>(value, m_regs->padding);
+			break;
+		}
+
+		case PROP_FRAME_GAP:
+		{
+			appendAsBytes(value, m_regs->delay);
+			break;
+		}
+
+		case PROP_TIMEOUT:
+		{
+			appendAsBytes(value, m_regs->timeout);
 			break;
 		}
 
 		case PROP_OVERFLOW_COUNT:
 		{
-			appendAsBytes(value, m_regs->overflow_count_a);
-			appendAsBytes(value, m_regs->overflow_count_b);
-			break;
-		}
-
-		case PROP_FRAME_SCRIPT:
-		{
-			if(params.length() < 4) return false;
-
-			uint32_t idx = readAsNumber<uint32_t>(params, 0);
-			if(idx >= 2*m_regs->num_scripts) return false;
-
-			uint32_t *ptr = makePointer<uint32_t>(m_regs, m_regs->script_mem_offset + 4 * idx * m_regs->max_script_size);
-
-			for(int i = 0, j = m_regs->max_script_size; i < j; ++i)
-			{
-				appendAsBytes(value, ptr[i]);
-			}
-
-			break;
-		}
-
-		case PROP_FRAME_SCRIPT_NAME:
-		{
-			if(params.length() < 4) return false;
-
-			uint32_t idx = readAsNumber<uint32_t>(params, 0);
-			if(idx >= 2*m_regs->num_scripts) return false;
-
-			value.append(m_scriptNames[idx]);
+			appendAsBytes(value, m_regs->overflow_count);
 			break;
 		}
 

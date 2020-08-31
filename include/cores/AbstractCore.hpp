@@ -22,11 +22,11 @@
 
 #include <Messages.hpp>
 
-class AbstractDevice
+class AbstractCore
 {
 public:
-	AbstractDevice(const QByteArray &name, uint32_t index);
-	virtual ~AbstractDevice();
+	AbstractCore(const QByteArray &name, uint32_t index);
+	virtual ~AbstractCore();
 
 	virtual void announce(QByteArray &output) const = 0;
 

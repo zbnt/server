@@ -20,34 +20,35 @@
 
 #include <cstdint>
 
-#include <dev/AbstractDevice.hpp>
+#include <cores/AbstractCore.hpp>
 
-#define TGEN_MEM_FRAME_OFFSET   0x0800
-#define TGEN_MEM_MASK_OFFSET    0x1000
-#define TGEN_MEM_SIZE           2048
-
-class TrafficGenerator : public AbstractDevice
+class StatsCollector : public AbstractCore
 {
 public:
-	static constexpr uint32_t CFG_ENABLE   = 1;
-	static constexpr uint32_t CFG_RESET    = 2;
-	static constexpr uint32_t CFG_BURST    = 4;
-	static constexpr uint32_t CFG_SEED_REQ = 8;
+	static constexpr uint32_t CFG_ENABLE     = 1;
+	static constexpr uint32_t CFG_RESET      = 2;
+	static constexpr uint32_t CFG_HOLD       = 4;
+	static constexpr uint32_t CFG_LOG_ENABLE = 8;
 
 	struct Registers
 	{
-		uint32_t config;
-		uint32_t status;
-		uint32_t fsize;
-		uint32_t fdelay;
-		uint16_t burst_time_on;
-		uint16_t burst_time_off;
-		uint8_t lfsr_seed_val;
+		uint16_t config;
+		uint16_t log_identifier;
+		uint32_t sample_period;
+		uint64_t overflow_count;
+
+		uint64_t time;
+		uint64_t tx_bytes;
+		uint64_t tx_good;
+		uint64_t tx_bad;
+		uint64_t rx_bytes;
+		uint64_t rx_good;
+		uint64_t rx_bad;
 	};
 
 public:
-	TrafficGenerator(const QByteArray &name, uint32_t index);
-	~TrafficGenerator();
+	StatsCollector(const QByteArray &name, uint32_t index);
+	~StatsCollector();
 
 	void announce(QByteArray &output) const;
 
@@ -64,6 +65,5 @@ public:
 private:
 	volatile Registers *m_regs;
 	size_t m_regsSize;
-
 	uint8_t m_port;
 };

@@ -16,7 +16,7 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <dev/TrafficGenerator.hpp>
+#include <cores/TrafficGenerator.hpp>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -28,7 +28,7 @@
 #include <BitstreamManager.hpp>
 
 TrafficGenerator::TrafficGenerator(const QByteArray &name, uint32_t index)
-	: AbstractDevice(name, index), m_regs(nullptr), m_regsSize(0), m_port(0)
+	: AbstractCore(name, index), m_regs(nullptr), m_regsSize(0), m_port(0)
 { }
 
 TrafficGenerator::~TrafficGenerator()

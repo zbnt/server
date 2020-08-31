@@ -23,9 +23,9 @@
 #include <QHash>
 #include <QVector>
 
-#include <dev/AxiDma.hpp>
-#include <dev/DmaBuffer.hpp>
-#include <dev/SimpleTimer.hpp>
+#include <cores/AxiDma.hpp>
+#include <cores/DmaBuffer.hpp>
+#include <cores/SimpleTimer.hpp>
 
 extern QString g_activeBitstream;
 extern QVector<QString> g_bitstreamList;
@@ -34,7 +34,7 @@ extern QHash<QByteArray, QByteArray> g_uioMap;
 extern AxiDma *g_axiDma;
 extern DmaBuffer *g_dmaBuffer;
 extern SimpleTimer *g_axiTimer;
-extern QVector<AbstractDevice*> g_deviceList;
+extern QVector<AbstractCore*> g_deviceList;
 
 void initBitstreamManager();
 bool loadBitstream(const QString &bitstreamName);

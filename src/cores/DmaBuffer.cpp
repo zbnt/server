@@ -16,7 +16,7 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <dev/DmaBuffer.hpp>
+#include <cores/DmaBuffer.hpp>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -29,7 +29,7 @@
 #include <BitstreamManager.hpp>
 
 DmaBuffer::DmaBuffer(const QByteArray &name)
-	: AbstractDevice(name, 0x80000000), m_ptr(nullptr), m_memSize(0)
+	: AbstractCore(name, 0x80000000), m_ptr(nullptr), m_memSize(0)
 { }
 
 DmaBuffer::~DmaBuffer()

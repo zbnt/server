@@ -20,65 +20,54 @@
 
 #include <cstdint>
 
-#include <dev/AbstractDevice.hpp>
+#include <cores/AbstractCore.hpp>
 
-class AxiDma : public AbstractDevice
+class FrameDetector : public AbstractCore
 {
 public:
 	static constexpr uint32_t CFG_ENABLE     = 1;
 	static constexpr uint32_t CFG_RESET      = 2;
-	static constexpr uint32_t CFG_FLUSH_FIFO = 4;
+	static constexpr uint32_t CFG_LOG_ENABLE = 4;
 
-	static constexpr uint32_t ST_BUSY        = 1;
-	static constexpr uint32_t ST_ERROR_SLV   = 2;
-	static constexpr uint32_t ST_ERROR_DEC   = 4;
-	static constexpr uint32_t ST_FIFO_EMPTY  = 8;
-
-	static constexpr uint32_t IRQ_MEM_END    = 1;
-	static constexpr uint32_t IRQ_TIMEOUT    = 2;
-	static constexpr uint32_t IRQ_AXI_ERROR  = 4;
-	static constexpr uint32_t IRQ_ALL        = IRQ_MEM_END | IRQ_TIMEOUT | IRQ_AXI_ERROR;
+	static constexpr uint32_t HAS_CMP_UNIT   = 1;
+	static constexpr uint32_t HAS_EDIT_UNIT  = 2;
+	static constexpr uint32_t HAS_CSUM_UNIT  = 4;
 
 	struct Registers
 	{
 		uint16_t config;
-		uint16_t status;
-		uint16_t irq;
-		uint16_t irq_enable;
-		uint64_t mem_base;
-		uint32_t mem_size;
-		uint32_t bytes_written;
-		uint32_t last_msg_end;
+		uint16_t log_identifier;
+		uint32_t script_enable;
+		uint32_t features;
+		uint32_t num_scripts;
+		uint32_t max_script_size;
+		uint32_t script_mem_offset;
+		uint32_t tx_fifo_size;
+		uint32_t extr_fifo_size;
+		uint64_t overflow_count_a;
+		uint64_t overflow_count_b;
 	};
 
 public:
-	AxiDma(const QByteArray &name);
-	~AxiDma();
+	FrameDetector(const QByteArray &name, uint32_t index);
+	~FrameDetector();
 
 	void announce(QByteArray &output) const;
 
 	DeviceType getType() const;
+	uint64_t getPorts() const;
 
 	bool isReady() const;
 	bool loadDevice(const void *fdt, int offset);
 
-	bool waitForInterrupt(int timeout);
-	void clearInterrupts(uint16_t irq);
-	void startTransfer();
-	void stopTransfer();
-	void flushFifo();
-
 	void setReset(bool reset);
 	bool setProperty(PropertyID propID, const QByteArray &value);
 	bool getProperty(PropertyID propID, const QByteArray &params, QByteArray &value);
-	uint16_t getActiveInterrupts() const;
-	uint32_t getLastMessageEnd() const;
-	uint32_t getBytesWritten() const;
-	bool isFifoEmpty() const;
 
 private:
 	volatile Registers *m_regs;
 	size_t m_regsSize;
-	uint32_t m_irq;
-	int m_fd;
+
+	uint8_t m_portA, m_portB;
+	QVector<QByteArray> m_scriptNames;
 };
