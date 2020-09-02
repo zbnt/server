@@ -9,7 +9,6 @@ set(CMAKE_CXX_STANDARD 14)
 
 option(USE_SANITIZERS "Compile with ASan and UBSan" OFF)
 
-set(CFG_PATH      "/etc/zbnt"              CACHE PATH "Location of configuration files")
 set(FIRMWARE_PATH "/usr/lib/firmware/zbnt" CACHE PATH "Location of bitstream and device tree files")
 set(SYSFS_PATH    "/sys"                   CACHE PATH "Path where sysfs is mounted")
 set(CONFIGFS_PATH "/sys/kernel/config"     CACHE PATH "Path where configfs is mounted")
@@ -65,7 +64,6 @@ target_include_directories(zbnt_server PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/inclu
 
 target_compile_definitions(
 	zbnt_server PUBLIC
-	ZBNT_CFG_PATH="${CFG_PATH}"
 	ZBNT_FIRMWARE_PATH="${FIRMWARE_PATH}"
 	ZBNT_SYSFS_PATH="${SYSFS_PATH}"
 	ZBNT_CONFIGFS_PATH="${CONFIGFS_PATH}"
