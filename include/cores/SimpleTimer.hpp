@@ -38,15 +38,15 @@ public:
 	};
 
 public:
-	SimpleTimer(const QByteArray &name);
+	SimpleTimer(const QString &name, uint32_t id, void *regs);
 	~SimpleTimer();
+
+	static AbstractCore *createCore(AbstractDevice *parent, const QString &name, uint32_t id,
+	                                void *regs, const void *fdt, int offset);
 
 	void announce(QByteArray &output) const;
 
 	DeviceType getType() const;
-
-	bool isReady() const;
-	bool loadDevice(const void *fdt, int offset);
 
 	void setRunning(bool running);
 	void setMaximumTime(uint64_t time);
@@ -59,5 +59,4 @@ public:
 
 private:
 	volatile Registers *m_regs;
-	size_t m_regsSize;
 };

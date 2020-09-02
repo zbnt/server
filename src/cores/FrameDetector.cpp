@@ -18,32 +18,45 @@
 
 #include <cores/FrameDetector.hpp>
 
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/mman.h>
-
 #include <QDebug>
 
+#include <AbstractDevice.hpp>
 #include <FdtUtils.hpp>
-#include <BitstreamManager.hpp>
 
-FrameDetector::FrameDetector(const QByteArray &name, uint32_t index)
-	: AbstractCore(name, index), m_regs(nullptr), m_regsSize(0), m_portA(0), m_portB(0)
-{ }
+FrameDetector::FrameDetector(const QString &name, uint32_t id, void *regs, uint8_t portA, uint8_t portB)
+	: AbstractCore(name, id), m_regs((volatile Registers*) regs), m_portA(portA), m_portB(portB)
+{
+	m_regs->config = CFG_LOG_ENABLE | CFG_ENABLE;
+	m_regs->log_identifier = m_id | MSG_ID_MEASUREMENT;
+
+	m_scriptNames.fill("", 2 * m_regs->num_scripts);
+
+	qInfo("[core] %s is connected to ports %d and %d", qUtf8Printable(name), portA, portB);
+}
 
 FrameDetector::~FrameDetector()
+{ }
+
+AbstractCore *FrameDetector::createCore(AbstractDevice *parent, const QString &name, uint32_t id,
+                                        void *regs, const void *fdt, int offset)
 {
-	if(m_regs)
+	Q_UNUSED(parent);
+
+	uint8_t portA = 0;
+	uint8_t portB = 0;
+
+	if(!fdtGetArrayProp(fdt, offset, "zbnt,ports", portA, portB))
 	{
-		munmap((void*) m_regs, m_regsSize);
+		qCritical("[core] E: Device tree lacks a valid value for zbnt,ports");
+		return nullptr;
 	}
+
+	return new FrameDetector(name, id, regs, portA, portB);
 }
 
 void FrameDetector::announce(QByteArray &output) const
 {
-	if(!isReady()) return;
-
-	appendAsBytes<uint8_t>(output, m_idx);
+	appendAsBytes<uint8_t>(output, m_id);
 	appendAsBytes<uint8_t>(output, DEV_FRAME_DETECTOR);
 	appendAsBytes<uint16_t>(output, 42);
 
@@ -80,73 +93,8 @@ uint64_t FrameDetector::getPorts() const
 	return (m_portB << 8) | m_portA;
 }
 
-bool FrameDetector::isReady() const
-{
-	return !!m_regs;
-}
-
-bool FrameDetector::loadDevice(const void *fdt, int offset)
-{
-	if(!fdt || m_regs) return false;
-
-	quintptr base;
-
-	if(!fdtGetArrayProp(fdt, offset, "reg", base, m_regsSize))
-	{
-		qCritical("[dev] E: Device %s doesn't have a valid reg property.", m_name.constData());
-		return false;
-	}
-
-	if(!fdtGetArrayProp(fdt, offset, "zbnt,ports", m_portA, m_portB))
-	{
-		qCritical("[dev] E: Device %s doesn't have a valid zbnt,ports property.", m_name.constData());
-		return false;
-	}
-
-	// Find UIO device
-
-	auto it = g_uioMap.find(m_name);
-
-	if(it == g_uioMap.end())
-	{
-		qCritical("[dev] E: No UIO device found for %s", m_name.constData());
-		return false;
-	}
-
-	qDebug("[dev] D: Found %s in %s, connected to eth%u and eth%u.", m_name.constData(), it->constData(), m_portA, m_portB);
-
-	// Open memory map
-
-	QByteArray uioDevice = "/dev/" + *it;
-	int fd = open(uioDevice.constData(), O_RDWR | O_SYNC);
-
-	if(fd == -1)
-	{
-		qCritical("[dev] E: Failed to open %s", uioDevice.constData());
-		return false;
-	}
-
-	m_regs = (volatile Registers*) mmap(NULL, m_regsSize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-
-	if(!m_regs || m_regs == MAP_FAILED)
-	{
-		m_regs = nullptr;
-		qCritical("[dev] E: Failed to mmap %s", uioDevice.constData());
-		return false;
-	}
-
-	m_regs->config = CFG_LOG_ENABLE | CFG_ENABLE;
-	m_regs->log_identifier = m_idx | MSG_ID_MEASUREMENT;
-	m_scriptNames.fill("", 2*m_regs->num_scripts);
-
-	close(fd);
-	return true;
-}
-
 void FrameDetector::setReset(bool reset)
 {
-	if(!isReady()) return;
-
 	if(reset)
 	{
 		m_regs->config = CFG_RESET;
@@ -159,8 +107,6 @@ void FrameDetector::setReset(bool reset)
 
 bool FrameDetector::setProperty(PropertyID propID, const QByteArray &value)
 {
-	if(!isReady()) return false;
-
 	switch(propID)
 	{
 		case PROP_ENABLE:
@@ -253,8 +199,6 @@ bool FrameDetector::setProperty(PropertyID propID, const QByteArray &value)
 
 bool FrameDetector::getProperty(PropertyID propID, const QByteArray &params, QByteArray &value)
 {
-	if(!isReady()) return false;
-
 	switch(propID)
 	{
 		case PROP_ENABLE:

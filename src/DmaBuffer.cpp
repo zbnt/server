@@ -16,27 +16,26 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#pragma once
+#include <DmaBuffer.hpp>
 
-#include <cstdint>
+DmaBuffer::DmaBuffer(const QString &name, uint8_t *virtAddr, uint64_t physAddr, size_t size)
+	: m_name(name), m_virtAddr(virtAddr), m_physAddr(physAddr), m_memSize(size)
+{ }
 
-#include <QByteArray>
-#include <QString>
+DmaBuffer::~DmaBuffer()
+{ }
 
-enum DaemonModes
+uint8_t *DmaBuffer::getVirtualAddr() const
 {
-	MODE_AXI,
-	MODE_PCIE
-};
+	return m_virtAddr;
+}
 
-struct DaemonConfig
+uint64_t DmaBuffer::getPhysicalAddr() const
 {
-	QString deviceName;
+	return m_physAddr;
+}
 
-	DaemonModes mode;
-	uint16_t port;
-};
-
-extern DaemonConfig g_daemonCfg;
-
-extern void loadSettings(const char *path, const char *profile);
+size_t DmaBuffer::getSize() const
+{
+	return m_memSize;
+}

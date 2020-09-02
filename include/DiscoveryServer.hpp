@@ -29,15 +29,14 @@
 class DiscoveryServer : public QObject
 {
 public:
-	DiscoveryServer(const QNetworkInterface &iface, bool ip6 = false, QObject *parent = nullptr);
+	DiscoveryServer(const QNetworkInterface &iface, quint16 port, bool ip6 = false, QObject *parent = nullptr);
 	~DiscoveryServer();
 
 	void onReadyRead();
 
 private:
 	bool m_ip6 = false;
+	quint16 m_port = 0;
 	QNetworkInterface m_iface;
 	QUdpSocket *m_server = nullptr;
 };
-
-extern QVector<DiscoveryServer*> g_discoverySrv;

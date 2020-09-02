@@ -26,12 +26,9 @@
 #include <QCoreApplication>
 #include <QThread>
 
+#include <AxiDevice.hpp>
 #include <Version.hpp>
-#include <Settings.hpp>
-#include <MessageUtils.hpp>
-#include <DiscoveryServer.hpp>
-#include <BitstreamManager.hpp>
-#include <MeasurementServer.hpp>
+#include <ZbntTcpServer.hpp>
 
 int main(int argc, char **argv)
 {
@@ -39,47 +36,58 @@ int main(int argc, char **argv)
 
 	// Load config
 
-	if(argc == 2)
+	if(argc != 2)
 	{
-		qInfo("[zbnt] Running version %s", ZBNT_VERSION);
-		loadSettings(ZBNT_CFG_PATH "/daemon.cfg", argv[1]);
-	}
-	else if(argc == 3)
-	{
-		qInfo("[zbnt] Running version %s", ZBNT_VERSION);
-		loadSettings(argv[2], argv[1]);
-	}
-	else
-	{
-		qInfo("Usage: zbnt_daemon [profile] [config_file]");
+		qCritical("Usage: zbnt_server [config]");
 		return 1;
 	}
 
-	qInfo("[mem] I: Running in %s mode", g_daemonCfg.mode == MODE_AXI ? "AXI" : "PCIe");
+	qInfo("[zbnt] Running version %s", ZBNT_VERSION);
 
-	// Program PL
+	QString configStr = app.arguments()[1].toLower();
+	auto config = configStr.splitRef(":");
 
-	initBitstreamManager();
-
-	// Initialize Qt application
-
-	for(const QNetworkInterface &iface : QNetworkInterface::allInterfaces())
+	if(config[0] != "axi" && config[0] != "pci")
 	{
-		switch(iface.type())
-		{
-			case QNetworkInterface::Ethernet:
-			case QNetworkInterface::Wifi:
-			case QNetworkInterface::Virtual:
-			{
-				g_discoverySrv.append(new DiscoveryServer(iface));
-				g_discoverySrv.append(new DiscoveryServer(iface, true));
-			}
-
-			default: { }
-		}
+		qCritical("[cfg] F: Invalid mode requested, valid values: AXI, PCI");
+		return 1;
 	}
 
-	g_measurementSrv = new MeasurementServer();
+	if(config[0] == "axi")
+	{
+#if defined(__arm__) || defined(__aarch64__)
+		if(!configStr.length() || config.length() > 2)
+		{
+			qCritical("[cfg] F: Invalid configuration string");
+			return 1;
+		}
 
-	return app.exec();
+		bool ok = true;
+		quint16 port = 0;
+
+		if(config.length() == 2)
+		{
+			port = config[1].toUShort(&ok);
+		}
+
+		if(!ok)
+		{
+			qCritical("[cfg] F: Invalid port specified");
+			return 1;
+		}
+
+		std::unique_ptr<AbstractDevice> dev(new AxiDevice());
+		std::unique_ptr<ZbntServer> server(new ZbntTcpServer(port, dev.get()));
+
+		return app.exec();
+#else
+		qCritical("[cfg] F: Mode AXI requires running in a Zynq/ZynqMP device");
+		return 1;
+#endif
+	}
+	else
+	{
+		qCritical("[cfg] F: PCI mode not implemented yet");
+		return 1;
+	}
 }

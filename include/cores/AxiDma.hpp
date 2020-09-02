@@ -20,6 +20,7 @@
 
 #include <cstdint>
 
+#include <DmaBuffer.hpp>
 #include <cores/AbstractCore.hpp>
 
 class AxiDma : public AbstractCore
@@ -52,17 +53,16 @@ public:
 	};
 
 public:
-	AxiDma(const QByteArray &name);
+	AxiDma(const QString &name, uint32_t id, void *regs, const DmaBuffer *buffer);
 	~AxiDma();
+
+	static AbstractCore *createCore(AbstractDevice *parent, const QString &name, uint32_t id,
+	                                void *regs, const void *fdt, int offset);
 
 	void announce(QByteArray &output) const;
 
 	DeviceType getType() const;
 
-	bool isReady() const;
-	bool loadDevice(const void *fdt, int offset);
-
-	bool waitForInterrupt(int timeout);
 	void clearInterrupts(uint16_t irq);
 	void startTransfer();
 	void stopTransfer();
@@ -78,7 +78,5 @@ public:
 
 private:
 	volatile Registers *m_regs;
-	size_t m_regsSize;
-	uint32_t m_irq;
-	int m_fd;
+	const DmaBuffer *m_buffer;
 };

@@ -18,21 +18,54 @@
 
 #include <cores/AbstractCore.hpp>
 
-AbstractCore::AbstractCore(const QByteArray &name, uint32_t index)
-	: m_name(name), m_idx(index)
+#include <AbstractDevice.hpp>
+#include <cores/AxiDma.hpp>
+#include <cores/AxiMdio.hpp>
+#include <cores/FrameDetector.hpp>
+#include <cores/LatencyMeasurer.hpp>
+#include <cores/SimpleTimer.hpp>
+#include <cores/StatsCollector.hpp>
+#include <cores/TrafficGenerator.hpp>
+
+const CoreConstructorMap AbstractCore::coreConstructors =
+{
+	{"zbnt,message-dma",       AxiDma::createCore},
+	{"zbnt,axi-mdio",          AxiMdio::createCore},
+	{"zbnt,frame-detector",    FrameDetector::createCore},
+	{"zbnt,latency-measurer",  LatencyMeasurer::createCore},
+	{"zbnt,simple-timer",      SimpleTimer::createCore},
+	{"zbnt,stats-collector",   StatsCollector::createCore},
+	{"zbnt,traffic-generator", TrafficGenerator::createCore}
+};
+
+AbstractCore::AbstractCore(const QString &name, uint32_t id)
+	: m_name(name), m_id(id)
 { }
 
 AbstractCore::~AbstractCore()
 { }
 
-const QByteArray &AbstractCore::getName() const
+AbstractCore *AbstractCore::createCore(AbstractDevice *parent, const QString &compatible,
+                                       const QString &name, uint32_t id, void *regs, const void *fdt, int offset)
+{
+	auto it = coreConstructors.constFind(compatible);
+
+	if(it != coreConstructors.constEnd())
+	{
+		return (*it)(parent, name, id, regs, fdt, offset);
+	}
+
+	return nullptr;
+}
+
+const QString &AbstractCore::getName() const
 {
 	return m_name;
 }
 
 uint32_t AbstractCore::getIndex() const
 {
-	return m_idx;
+	return m_id;
 }
 
 uint64_t AbstractCore::getPorts() const

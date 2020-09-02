@@ -18,32 +18,44 @@
 
 #include <cores/TrafficGenerator.hpp>
 
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/mman.h>
-
 #include <QDebug>
 
+#include <AbstractDevice.hpp>
 #include <FdtUtils.hpp>
-#include <BitstreamManager.hpp>
 
-TrafficGenerator::TrafficGenerator(const QByteArray &name, uint32_t index)
-	: AbstractCore(name, index), m_regs(nullptr), m_regsSize(0), m_port(0)
-{ }
+TrafficGenerator::TrafficGenerator(const QString &name, uint32_t id, void *regs, uint8_t port)
+	: AbstractCore(name, id), m_regs((volatile Registers*) regs), m_port(port)
+{
+	m_regs->fsize = 60;
+	m_regs->fdelay = 12;
+	m_regs->burst_time_on = 100;
+	m_regs->burst_time_off = 100;
+
+	qInfo("[core] %s is connected to port %d", qUtf8Printable(name), port);
+}
 
 TrafficGenerator::~TrafficGenerator()
+{ }
+
+AbstractCore *TrafficGenerator::createCore(AbstractDevice *parent, const QString &name, uint32_t id,
+                                           void *regs, const void *fdt, int offset)
 {
-	if(m_regs)
+	Q_UNUSED(parent);
+
+	uint8_t port = 0;
+
+	if(!fdtGetArrayProp(fdt, offset, "zbnt,ports", port))
 	{
-		munmap((void*) m_regs, m_regsSize);
+		qCritical("[core] E: Device tree lacks a valid value for zbnt,ports");
+		return nullptr;
 	}
+
+	return new TrafficGenerator(name, id, regs, port);
 }
 
 void TrafficGenerator::announce(QByteArray &output) const
 {
-	if(!isReady()) return;
-
-	appendAsBytes<uint8_t>(output, m_idx);
+	appendAsBytes<uint8_t>(output, m_id);
 	appendAsBytes<uint8_t>(output, DEV_TRAFFIC_GENERATOR);
 	appendAsBytes<uint16_t>(output, 13);
 
@@ -66,74 +78,8 @@ uint64_t TrafficGenerator::getPorts() const
 	return m_port;
 }
 
-bool TrafficGenerator::isReady() const
-{
-	return !!m_regs;
-}
-
-bool TrafficGenerator::loadDevice(const void *fdt, int offset)
-{
-	if(!fdt || m_regs) return false;
-
-	quintptr base;
-
-	if(!fdtGetArrayProp(fdt, offset, "reg", base, m_regsSize))
-	{
-		qCritical("[dev] E: Device %s doesn't have a valid reg property.", m_name.constData());
-		return false;
-	}
-
-	if(!fdtGetArrayProp(fdt, offset, "zbnt,ports", m_port))
-	{
-		qCritical("[dev] E: Device %s doesn't have a valid zbnt,ports property.", m_name.constData());
-		return false;
-	}
-
-	// Find UIO device
-
-	auto it = g_uioMap.find(m_name);
-
-	if(it == g_uioMap.end())
-	{
-		qCritical("[dev] E: No UIO device found for %s", m_name.constData());
-		return false;
-	}
-
-	qDebug("[dev] D: Found %s in %s, connected to eth%u.", m_name.constData(), it->constData(), m_port);
-
-	// Open memory map
-
-	QByteArray uioDevice = "/dev/" + *it;
-	int fd = open(uioDevice.constData(), O_RDWR | O_SYNC);
-
-	if(fd == -1)
-	{
-		qCritical("[dev] E: Failed to open %s", uioDevice.constData());
-		return false;
-	}
-
-	m_regs = (volatile Registers*) mmap(NULL, m_regsSize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-
-	if(!m_regs || m_regs == MAP_FAILED)
-	{
-		m_regs = nullptr;
-		qCritical("[dev] E: Failed to mmap %s", uioDevice.constData());
-		return false;
-	}
-
-	m_regs->fsize = 60;
-	m_regs->fdelay = 12;
-	m_regs->burst_time_on = 100;
-	m_regs->burst_time_off = 100;
-
-	close(fd);
-	return true;
-}
-
 void TrafficGenerator::setReset(bool reset)
 {
-	if(!isReady()) return;
-
 	if(reset)
 	{
 		m_regs->config = CFG_RESET;
@@ -146,8 +92,6 @@ void TrafficGenerator::setReset(bool reset)
 
 bool TrafficGenerator::setProperty(PropertyID propID, const QByteArray &value)
 {
-	if(!isReady()) return false;
-
 	switch(propID)
 	{
 		case PROP_ENABLE:
@@ -264,8 +208,6 @@ bool TrafficGenerator::setProperty(PropertyID propID, const QByteArray &value)
 
 bool TrafficGenerator::getProperty(PropertyID propID, const QByteArray &params, QByteArray &value)
 {
-	if(!isReady()) return false;
-
 	Q_UNUSED(params);
 
 	switch(propID)

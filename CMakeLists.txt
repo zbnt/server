@@ -32,11 +32,15 @@ add_custom_target(
 
 set(ZBNT_SERVER_SRC
 	"src/Main.cpp"
-	"src/FdtUtils.cpp"
-	"src/Settings.cpp"
+
 	"src/DiscoveryServer.cpp"
-	"src/BitstreamManager.cpp"
-	"src/MeasurementServer.cpp"
+	"src/DmaBuffer.cpp"
+	"src/FdtUtils.cpp"
+	"src/ZbntServer.cpp"
+	"src/ZbntTcpServer.cpp"
+
+	"src/AbstractDevice.cpp"
+	"src/AxiDevice.cpp"
 
 	"server-shared/src/MessageUtils.cpp"
 	"server-shared/src/MessageReceiver.cpp"
@@ -45,7 +49,6 @@ set(ZBNT_SERVER_SRC
 	"src/cores/AbstractCore.cpp"
 	"src/cores/AxiDma.cpp"
 	"src/cores/AxiMdio.cpp"
-	"src/cores/DmaBuffer.cpp"
 	"src/cores/SimpleTimer.cpp"
 	"src/cores/FrameDetector.cpp"
 	"src/cores/StatsCollector.cpp"

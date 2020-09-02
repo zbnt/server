@@ -21,7 +21,7 @@
 #include <cstdint>
 #include <functional>
 
-#include <QByteArray>
+#include <QString>
 
 extern "C"
 {
@@ -54,8 +54,8 @@ T readAsNumber(const QByteArray &data, quint32 offset)
 }
 
 extern int64_t getMemoryUsage();
-extern bool fdtEnumerateDevices(const void *fdt, int offset, const std::function<bool(const QByteArray&, int)> &callback);
-extern bool fdtGetStringProp(const void *fdt, int offset, const char *name, QByteArray &out);
+extern bool fdtEnumerateDevices(const void *fdt, int offset, const std::function<bool(const QString&, int)> &callback);
+extern bool fdtGetStringProp(const void *fdt, int offset, const char *name, QString &out);
 
 template<typename T>
 bool fdtArrayToVars(const uint8_t *data, int len, T &out)

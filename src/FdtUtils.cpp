@@ -18,14 +18,14 @@
 
 #include <FdtUtils.hpp>
 
-bool fdtEnumerateDevices(const void *fdt, int offset, const std::function<bool(const QByteArray&, int)> &callback)
+bool fdtEnumerateDevices(const void *fdt, int offset, const std::function<bool(const QString&, int)> &callback)
 {
 	for(int node = fdt_first_subnode(fdt, offset); node >= 0; node = fdt_next_subnode(fdt, node))
 	{
 		int nameLen = 0;
 		const char *name = fdt_get_name(fdt, node, &nameLen);
 
-		if(!callback(QByteArray(name, nameLen), node))
+		if(!callback(QString::fromUtf8(QByteArray(name, nameLen)), node))
 		{
 			return false;
 		}
@@ -36,7 +36,7 @@ bool fdtEnumerateDevices(const void *fdt, int offset, const std::function<bool(c
 	return true;
 }
 
-bool fdtGetStringProp(const void *fdt, int offset, const char *name, QByteArray &out)
+bool fdtGetStringProp(const void *fdt, int offset, const char *name, QString &out)
 {
 	int len = 0;
 	const void *data = fdt_getprop(fdt, offset, name, &len);
@@ -46,6 +46,6 @@ bool fdtGetStringProp(const void *fdt, int offset, const char *name, QByteArray 
 		return false;
 	}
 
-	out = QByteArray((const char*) data, len);
+	out = QString::fromUtf8(QByteArray((const char*) data, len));
 	return true;
 }

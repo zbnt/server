@@ -1,6 +1,6 @@
 /*
 	zbnt/server
-	Copyright (C) 2019 Oscar R.
+	Copyright (C) 2020 Oscar R.
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -18,24 +18,22 @@
 
 #pragma once
 
-#include <cstdint>
-
+#include <QByteArray>
 #include <QHash>
-#include <QVector>
 
-#include <cores/AxiDma.hpp>
-#include <cores/DmaBuffer.hpp>
-#include <cores/SimpleTimer.hpp>
+#include <AbstractDevice.hpp>
 
-extern QString g_activeBitstream;
-extern QVector<QString> g_bitstreamList;
-extern QHash<QByteArray, QByteArray> g_uioMap;
+class AxiDevice : public AbstractDevice
+{
+public:
+	AxiDevice();
+	~AxiDevice();
 
-extern AxiDma *g_axiDma;
-extern DmaBuffer *g_dmaBuffer;
-extern SimpleTimer *g_axiTimer;
-extern QVector<AbstractCore*> g_deviceList;
+	bool loadBitstream(const QString &name);
 
-void initBitstreamManager();
-bool loadBitstream(const QString &bitstreamName);
-bool loadDeviceTree(const QString &dtboName, const QByteArray &dtboContents);
+private:
+	bool loadDeviceTree(const QString &name, const QByteArray &contents);
+
+private:
+	QHash<QString, QByteArray> m_uioMap;
+};

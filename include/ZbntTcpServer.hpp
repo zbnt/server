@@ -1,6 +1,6 @@
 /*
 	zbnt/server
-	Copyright (C) 2019 Oscar R.
+	Copyright (C) 2020 Oscar R.
 
 	This program is free software: you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -18,44 +18,31 @@
 
 #pragma once
 
-#include <QTimer>
 #include <QTcpServer>
 #include <QTcpSocket>
 
-#include <Messages.hpp>
-#include <MessageReceiver.hpp>
+#include <DiscoveryServer.hpp>
+#include <ZbntServer.hpp>
 
-class MeasurementServer : public QObject, public MessageReceiver
+class ZbntTcpServer : public ZbntServer
 {
 public:
-	MeasurementServer(QObject *parent = nullptr);
-	~MeasurementServer();
+	ZbntTcpServer(quint16 port, AbstractDevice *parent);
+	~ZbntTcpServer();
 
-	void startRun();
-	void stopRun();
-
-	void pollAxiTimer();
-	void flushDmaBuffer();
-	void onHelloTimeout();
-	void onMessageReceived(quint16 id, const QByteArray &data);
+private:
+	bool clientAvailable() const;
+	void sendBytes(const QByteArray &data);
+	void sendBytes(const uint8_t *data, int size);
+	void sendMessage(MessageID id, const QByteArray &data);
 
 	void onIncomingConnection();
 	void onReadyRead();
+	void onHelloTimeout();
 	void onNetworkStateChanged(QAbstractSocket::SocketState state);
 
 private:
-	QTimer *m_dmaTimer = nullptr;
-	QByteArray m_pendingDmaData;
-	uint32_t m_lastDmaIdx = 0;
-
-	QTimer *m_helloTimer = nullptr;
-	bool m_helloReceived = false;
-
-	QTimer *m_runEndTimer = nullptr;
-	bool m_isRunning = false;
-
 	QTcpServer *m_server = nullptr;
 	QTcpSocket *m_client = nullptr;
+	QVector<DiscoveryServer*> m_discoveryServers;
 };
-
-extern MeasurementServer *g_measurementSrv;

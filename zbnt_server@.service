@@ -5,7 +5,7 @@ After=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/zbnt_daemon %i
+ExecStart=/usr/bin/zbnt_server %i
 Restart=always
 RestartSec=5
 

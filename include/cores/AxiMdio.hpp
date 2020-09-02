@@ -40,15 +40,15 @@ public:
 	};
 
 public:
-	AxiMdio(const QByteArray &name, uint32_t index);
+	AxiMdio(const QString &name, uint32_t id, void *regs, const QList<uint8_t> &ports, const QList<uint8_t> &phys);
 	~AxiMdio();
+
+	static AbstractCore *createCore(AbstractDevice *parent, const QString &name, uint32_t id,
+	                                void *regs, const void *fdt, int offset);
 
 	void announce(QByteArray &output) const;
 
 	DeviceType getType() const;
-
-	bool isReady() const;
-	bool loadDevice(const void *fdt, int offset);
 
 	uint32_t readPhy(uint32_t phyAddr, uint32_t regAddr);
 	uint32_t readPhyIndirect(uint32_t phyAddr, uint32_t regAddr);
@@ -61,8 +61,6 @@ public:
 
 private:
 	volatile Registers *m_regs;
-	size_t m_regsSize;
-
 	QList<uint8_t> m_ports;
 	QList<uint8_t> m_phys;
 };

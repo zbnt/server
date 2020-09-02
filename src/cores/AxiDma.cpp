@@ -18,33 +18,34 @@
 
 #include <cores/AxiDma.hpp>
 
-#include <poll.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/mman.h>
-
 #include <QDebug>
 
+#include <AbstractDevice.hpp>
 #include <FdtUtils.hpp>
-#include <BitstreamManager.hpp>
 
-#include <cores/DmaBuffer.hpp>
-
-AxiDma::AxiDma(const QByteArray &name)
-	: AbstractCore(name, 0x80000000), m_regs(nullptr), m_regsSize(0), m_irq(0), m_fd(-1)
-{ }
+AxiDma::AxiDma(const QString &name, uint32_t id, void *regs, const DmaBuffer *buffer)
+	: AbstractCore(name, id), m_regs((volatile Registers*) regs), m_buffer(buffer)
+{
+	m_regs->mem_base = buffer->getPhysicalAddr();
+	m_regs->mem_size = buffer->getSize();
+}
 
 AxiDma::~AxiDma()
+{ }
+
+AbstractCore *AxiDma::createCore(AbstractDevice *parent, const QString &name, uint32_t id,
+                                 void *regs, const void *fdt, int offset)
 {
-	if(m_regs)
+	Q_UNUSED(fdt);
+	Q_UNUSED(offset);
+
+	if(!parent->dmaBuffer())
 	{
-		munmap((void*) m_regs, m_regsSize);
+		qCritical("[core] E: No valid DMA buffer found");
+		return nullptr;
 	}
 
-	if(m_fd != -1)
-	{
-		close(m_fd);
-	}
+	return new AxiDma(name, id, regs, parent->dmaBuffer());
 }
 
 void AxiDma::announce(QByteArray &output) const
@@ -57,91 +58,13 @@ DeviceType AxiDma::getType() const
 	return DEV_AXI_DMA;
 }
 
-bool AxiDma::isReady() const
-{
-	return m_regs;
-}
-
-bool AxiDma::loadDevice(const void *fdt, int offset)
-{
-	if(!fdt || m_regs) return false;
-
-	quintptr base;
-
-	if(!fdtGetArrayProp(fdt, offset, "reg", base, m_regsSize))
-	{
-		qCritical("[dev] E: Device %s doesn't have a valid reg property.", m_name.constData());
-		return false;
-	}
-
-	// Find UIO device
-
-	auto it = g_uioMap.find(m_name);
-
-	if(it == g_uioMap.end())
-	{
-		qCritical("[dev] E: No UIO device found for %s", m_name.constData());
-		return false;
-	}
-
-	qDebug("[dev] D: Found %s in %s.", m_name.constData(), it->constData());
-
-	// Open memory map
-
-	QByteArray uioDevice = "/dev/" + *it;
-	m_fd = open(uioDevice.constData(), O_RDWR | O_SYNC);
-
-	if(m_fd == -1)
-	{
-		qCritical("[dev] E: Failed to open %s", uioDevice.constData());
-		return false;
-	}
-
-	m_regs = (volatile Registers*) mmap(NULL, m_regsSize, PROT_READ | PROT_WRITE, MAP_SHARED, m_fd, 0);
-
-	if(!m_regs || m_regs == MAP_FAILED)
-	{
-		m_regs = nullptr;
-		qCritical("[dev] E: Failed to mmap %s", uioDevice.constData());
-		return false;
-	}
-
-	// Link to a buffer
-
-	if(!g_dmaBuffer->isReady())
-	{
-		qCritical("[dev] E: No valid DMA buffer was found for %s", m_name.constData());
-		return false;
-	}
-
-	return true;
-}
-
-bool AxiDma::waitForInterrupt(int timeout)
-{
-	pollfd pfd;
-	pfd.fd = m_fd;
-	pfd.events = POLLIN;
-
-	if(poll(&pfd, 1, timeout) >= 1)
-	{
-		read(m_fd, &m_irq, sizeof(uint32_t));
-		return true;
-	}
-
-	return false;
-}
-
 void AxiDma::clearInterrupts(uint16_t irq)
 {
 	m_regs->irq = irq;
-	write(m_fd, &m_irq, sizeof(uint32_t));
 }
 
 void AxiDma::startTransfer()
 {
-	m_regs->mem_base = g_dmaBuffer->getPhysAddr();
-	m_regs->mem_size = g_dmaBuffer->getMemSize();
 	m_regs->irq_enable = IRQ_MEM_END | IRQ_TIMEOUT | IRQ_AXI_ERROR;
 	m_regs->config = CFG_ENABLE;
 }

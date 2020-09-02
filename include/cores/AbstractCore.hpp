@@ -18,31 +18,45 @@
 
 #pragma once
 
+#include <functional>
+
 #include <QByteArray>
+#include <QHash>
 
 #include <Messages.hpp>
+
+class AbstractCore;
+class AbstractDevice;
+
+using CoreConstructor = std::function<AbstractCore*(AbstractDevice*, const QString&, uint32_t,
+                                      void*, const void*, int)>;
+
+using CoreConstructorMap = QHash<QString, CoreConstructor>;
 
 class AbstractCore
 {
 public:
-	AbstractCore(const QByteArray &name, uint32_t index);
+	AbstractCore(const QString &name, uint32_t id);
 	virtual ~AbstractCore();
+
+	static AbstractCore *createCore(AbstractDevice *parent, const QString &compatible,
+	                                const QString &name, uint32_t id, void *regs, const void *fdt, int offset);
 
 	virtual void announce(QByteArray &output) const = 0;
 
-	const QByteArray &getName() const;
+	const QString &getName() const;
 	virtual DeviceType getType() const = 0;
 	virtual uint32_t getIndex() const;
 	virtual uint64_t getPorts() const;
-
-	virtual bool isReady() const = 0;
-	virtual bool loadDevice(const void *fdt, int offset) = 0;
 
 	virtual void setReset(bool reset) = 0;
 	virtual bool setProperty(PropertyID propID, const QByteArray &value) = 0;
 	virtual bool getProperty(PropertyID propID, const QByteArray &params, QByteArray &value) = 0;
 
 protected:
-	QByteArray m_name;
-	uint32_t m_idx;
+	QString m_name;
+	uint32_t m_id;
+
+private:
+	static const CoreConstructorMap coreConstructors;
 };

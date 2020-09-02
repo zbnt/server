@@ -18,98 +18,44 @@
 
 #include <cores/SimpleTimer.hpp>
 
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/mman.h>
-
 #include <QDebug>
 
+#include <AbstractDevice.hpp>
 #include <FdtUtils.hpp>
-#include <BitstreamManager.hpp>
 
-SimpleTimer::SimpleTimer(const QByteArray &name)
-	: AbstractCore(name, 0xFF), m_regs(nullptr), m_regsSize(0)
-{ }
+SimpleTimer::SimpleTimer(const QString &name, uint32_t id, void *regs)
+	: AbstractCore(name, id), m_regs((volatile Registers*) regs)
+{
+	m_regs->max_time = 125'000'000;
+}
 
 SimpleTimer::~SimpleTimer()
+{ }
+
+AbstractCore *SimpleTimer::createCore(AbstractDevice *parent, const QString &name, uint32_t id,
+                                      void *regs, const void *fdt, int offset)
 {
-	if(m_regs)
-	{
-		munmap((void*) m_regs, m_regsSize);
-	}
+	Q_UNUSED(parent);
+	Q_UNUSED(fdt);
+	Q_UNUSED(offset);
+
+	return new SimpleTimer(name, id, regs);
 }
 
 void SimpleTimer::announce(QByteArray &output) const
 {
-	if(!isReady()) return;
-
-	appendAsBytes<uint8_t>(output, m_idx);
+	appendAsBytes<uint8_t>(output, m_id);
 	appendAsBytes<uint8_t>(output, DEV_SIMPLE_TIMER);
 	appendAsBytes<uint16_t>(output, 8);
 
 	appendAsBytes<uint16_t>(output, PROP_CLOCK_FREQ);
 	appendAsBytes<uint16_t>(output, 4);
-	appendAsBytes<uint32_t>(output, 125000000);
+	appendAsBytes<uint32_t>(output, 125'000'000);
 }
 
 DeviceType SimpleTimer::getType() const
 {
 	return DEV_SIMPLE_TIMER;
-}
-
-bool SimpleTimer::isReady() const
-{
-	return !!m_regs;
-}
-
-bool SimpleTimer::loadDevice(const void *fdt, int offset)
-{
-	if(isReady() || !fdt) return false;
-
-	quintptr base;
-
-	if(!fdtGetArrayProp(fdt, offset, "reg", base, m_regsSize))
-	{
-		qCritical("[dev] E: Device %s doesn't have a valid reg property.", m_name.constData());
-		return false;
-	}
-
-	// Find UIO device
-
-	auto it = g_uioMap.find(m_name);
-
-	if(it == g_uioMap.end())
-	{
-		qCritical("[dev] E: No UIO device found for %s", m_name.constData());
-		return false;
-	}
-
-	qDebug("[dev] D: Found %s in %s.", m_name.constData(), it->constData());
-
-	// Open memory map
-
-	QByteArray uioDevice = "/dev/" + *it;
-	int fd = open(uioDevice.constData(), O_RDWR | O_SYNC);
-
-	if(fd == -1)
-	{
-		qCritical("[dev] E: Failed to open %s", uioDevice.constData());
-		return false;
-	}
-
-	m_regs = (volatile Registers*) mmap(NULL, m_regsSize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-
-	if(!m_regs || m_regs == MAP_FAILED)
-	{
-		m_regs = nullptr;
-		qCritical("[dev] E: Failed to mmap %s", uioDevice.constData());
-		return false;
-	}
-
-	m_regs->max_time = 125'000'000;
-
-	close(fd);
-	return true;
 }
 
 void SimpleTimer::setRunning(bool running)
@@ -124,8 +70,6 @@ void SimpleTimer::setMaximumTime(uint64_t time)
 
 void SimpleTimer::setReset(bool reset)
 {
-	if(!isReady()) return;
-
 	if(reset)
 	{
 		m_regs->config = CFG_RESET;
@@ -138,8 +82,6 @@ void SimpleTimer::setReset(bool reset)
 
 bool SimpleTimer::setProperty(PropertyID propID, const QByteArray &value)
 {
-	if(!isReady()) return false;
-
 	switch(propID)
 	{
 		case PROP_ENABLE:
@@ -188,8 +130,6 @@ bool SimpleTimer::setProperty(PropertyID propID, const QByteArray &value)
 
 bool SimpleTimer::getProperty(PropertyID propID, const QByteArray &params, QByteArray &value)
 {
-	if(!isReady()) return false;
-
 	Q_UNUSED(params);
 
 	switch(propID)

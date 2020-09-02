@@ -23,14 +23,10 @@
 #include <QNetworkInterface>
 
 #include <Version.hpp>
-#include <Settings.hpp>
 #include <MessageUtils.hpp>
-#include <MeasurementServer.hpp>
 
-QVector<DiscoveryServer*> g_discoverySrv;
-
-DiscoveryServer::DiscoveryServer(const QNetworkInterface &iface, bool ip6, QObject *parent)
-	: QObject(parent), m_ip6(ip6), m_iface(iface)
+DiscoveryServer::DiscoveryServer(const QNetworkInterface &iface, quint16 port, bool ip6, QObject *parent)
+	: QObject(parent), m_ip6(ip6), m_port(port), m_iface(iface)
 {
 	m_server = new QUdpSocket(this);
 	connect(m_server, &QUdpSocket::readyRead, this, &DiscoveryServer::onReadyRead);
@@ -86,8 +82,8 @@ void DiscoveryServer::onReadyRead()
 			continue;
 		}
 
-		uint16_t messageID = readAsNumber<uint16_t>(rx_message, 4);
-		uint16_t messageSize = readAsNumber<uint16_t>(rx_message, 6);
+		quint16 messageID = readAsNumber<quint16>(rx_message, 4);
+		quint16 messageSize = readAsNumber<quint16>(rx_message, 6);
 
 		if(messageID != MSG_ID_DISCOVERY || messageSize != 8)
 		{
@@ -112,7 +108,7 @@ void DiscoveryServer::onReadyRead()
 		discoveryResponse.append(padString(ZBNT_VERSION_COMMIT, 16));
 		appendAsBytes<quint8>(discoveryResponse, ZBNT_VERSION_DIRTY);
 
-		appendAsBytes<quint16>(discoveryResponse, g_daemonCfg.port);
+		appendAsBytes<quint16>(discoveryResponse, m_port);
 
 		discoveryResponse.append(host);
 

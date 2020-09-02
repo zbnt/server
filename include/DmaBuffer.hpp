@@ -20,35 +20,21 @@
 
 #include <cstdint>
 
-#include <QAbstractSocket>
+#include <QString>
 
-#include <cores/AbstractCore.hpp>
-
-class DmaBuffer : public AbstractCore
+class DmaBuffer
 {
 public:
-	DmaBuffer(const QByteArray &name);
+	DmaBuffer(const QString &name, uint8_t *virtAddr, uint64_t physAddr, size_t size);
 	~DmaBuffer();
 
-	void announce(QByteArray &output) const;
-
-	DeviceType getType() const;
-	const char *getVirtAddr() const;
-	uint64_t getPhysAddr() const;
-	size_t getMemSize() const;
-
-	bool isReady() const;
-	bool loadDevice(const void *fdt, int offset);
-
-	void appendBuffer(QByteArray &out) const;
-	void sendBuffer(QAbstractSocket *thread) const;
-
-	void setReset(bool reset);
-	bool setProperty(PropertyID propID, const QByteArray &value);
-	bool getProperty(PropertyID propID, const QByteArray &params, QByteArray &value);
+	uint8_t *getVirtualAddr() const;
+	uint64_t getPhysicalAddr() const;
+	size_t getSize() const;
 
 private:
-	uint8_t *m_ptr;
+	QString m_name;
+	uint8_t *m_virtAddr;
 	uint64_t m_physAddr;
 	size_t m_memSize;
 };

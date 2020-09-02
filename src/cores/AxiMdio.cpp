@@ -18,33 +18,122 @@
 
 #include <cores/AxiMdio.hpp>
 
-#include <poll.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/mman.h>
-
 #include <QDebug>
 
+#include <AbstractDevice.hpp>
 #include <FdtUtils.hpp>
-#include <BitstreamManager.hpp>
 
-AxiMdio::AxiMdio(const QByteArray &name, uint32_t index)
-	: AbstractCore(name, index), m_regs(nullptr), m_regsSize(0)
-{ }
+AxiMdio::AxiMdio(const QString &name, uint32_t id, void *regs, const QList<uint8_t> &ports, const QList<uint8_t> &phys)
+	: AbstractCore(name, id), m_regs((volatile Registers*) regs), m_ports(ports), m_phys(phys)
+{
+	qInfo("[core] %s is connected to:", qUtf8Printable(name));
+
+	for(int i = 0; i < ports.size(); ++i)
+	{
+		qInfo("           - Port %d, phy address %02X", ports[i], phys[i]);
+	}
+}
 
 AxiMdio::~AxiMdio()
+{ }
+
+AbstractCore *AxiMdio::createCore(AbstractDevice *parent, const QString &name, uint32_t id,
+                                  void *regs, const void *fdt, int offset)
 {
-	if(m_regs)
+	Q_UNUSED(parent);
+
+	QList<uint8_t> ports, phys;
+
+	int length = 0;
+	const uint8_t *portList = (const uint8_t*) fdt_getprop(fdt, offset, "zbnt,ports", &length);
+
+	if(portList)
 	{
-		munmap((void*) m_regs, m_regsSize);
+		while(length >= 4)
+		{
+			uint32_t portID;
+
+			if(fdtArrayToVars(portList, length, portID) && portID <= 255)
+			{
+				ports.append(portID);
+			}
+
+			length -= 4;
+			portList += 4;
+		}
 	}
+	else
+	{
+		qCritical("[core] E: Device tree lacks a valid value for zbnt,ports");
+		return nullptr;
+	}
+
+	const uint8_t *phyList = (const uint8_t*) fdt_getprop(fdt, offset, "zbnt,phy-addr", &length);
+
+	if(phyList)
+	{
+		while(length >= 4)
+		{
+			uint32_t phyAddr;
+
+			if(fdtArrayToVars(phyList, length, phyAddr) && phyAddr <= 31)
+			{
+				phys.append(phyAddr);
+			}
+
+			length -= 4;
+			phyList += 4;
+		}
+	}
+	else
+	{
+		qCritical("[core] E: Device tree lacks a valid value for zbnt,phy-addr");
+		return nullptr;
+	}
+
+	if(ports.size() != phys.size())
+	{
+		qCritical("[core] E: Number of ports and PHYs in device doesn't match");
+		return nullptr;
+	}
+
+	// Initialize MDIO registers
+
+	AxiMdio *core = new AxiMdio(name, id, regs, ports, phys);
+
+	const uint8_t *initSeq = (const uint8_t*) fdt_getprop(fdt, offset, "zbnt,init-seq", &length);
+
+	if(initSeq)
+	{
+		while(length >= 12)
+		{
+			uint32_t phyAddr, regAddr, value;
+
+			if(fdtArrayToVars(initSeq, length, phyAddr, regAddr, value))
+			{
+				if(phyAddr > 31) continue;
+
+				if(regAddr > 31)
+				{
+					core->writePhyIndirect(phyAddr, regAddr, value);
+				}
+				else
+				{
+					core->writePhy(phyAddr, regAddr, value);
+				}
+			}
+
+			length -= 12;
+			initSeq += 12;
+		}
+	}
+
+	return core;
 }
 
 void AxiMdio::announce(QByteArray &output) const
 {
-	if(!isReady()) return;
-
-	appendAsBytes<uint8_t>(output, m_idx);
+	appendAsBytes<uint8_t>(output, m_id);
 	appendAsBytes<uint8_t>(output, DEV_AXI_MDIO);
 	appendAsBytes<uint16_t>(output, 8 + m_ports.size() + m_phys.size());
 
@@ -70,145 +159,8 @@ DeviceType AxiMdio::getType() const
 	return DEV_AXI_MDIO;
 }
 
-bool AxiMdio::isReady() const
-{
-	return m_regs;
-}
-
-bool AxiMdio::loadDevice(const void *fdt, int offset)
-{
-	if(!fdt || m_regs) return false;
-
-	quintptr base;
-
-	if(!fdtGetArrayProp(fdt, offset, "reg", base, m_regsSize))
-	{
-		qCritical("[dev] E: Device %s doesn't have a valid reg property.", m_name.constData());
-		return false;
-	}
-
-	int length = 0;
-	const uint8_t *portList = (const uint8_t*) fdt_getprop(fdt, offset, "zbnt,ports", &length);
-
-	if(portList)
-	{
-		while(length >= 4)
-		{
-			uint32_t portID;
-
-			if(fdtArrayToVars(portList, length, portID) && portID <= 255)
-			{
-				m_ports.append(portID);
-			}
-
-			length -= 4;
-			portList += 4;
-		}
-	}
-	else
-	{
-		qCritical("[dev] E: Device %s doesn't have a valid zbnt,ports property.", m_name.constData());
-		return false;
-	}
-
-	const uint8_t *phyList = (const uint8_t*) fdt_getprop(fdt, offset, "zbnt,phy-addr", &length);
-
-	if(phyList)
-	{
-		while(length >= 4)
-		{
-			uint32_t phyAddr;
-
-			if(fdtArrayToVars(phyList, length, phyAddr) && phyAddr <= 31)
-			{
-				m_phys.append(phyAddr);
-			}
-
-			length -= 4;
-			phyList += 4;
-		}
-	}
-	else
-	{
-		qCritical("[dev] E: Device %s doesn't have a valid zbnt,phy-addr property.", m_name.constData());
-		return false;
-	}
-
-	if(m_ports.size() != m_phys.size())
-	{
-		qCritical("[dev] E: Number of ports and PHYs in device %s doesn't match.", m_name.constData());
-		return false;
-	}
-
-	// Find UIO device
-
-	auto it = g_uioMap.find(m_name);
-
-	if(it == g_uioMap.end())
-	{
-		qCritical("[dev] E: No UIO device found for %s", m_name.constData());
-		return false;
-	}
-
-	qDebug("[dev] D: Found %s in %s.", m_name.constData(), it->constData());
-
-	// Open memory map
-
-	QByteArray uioDevice = "/dev/" + *it;
-	int fd = open(uioDevice.constData(), O_RDWR | O_SYNC);
-
-	if(fd == -1)
-	{
-		qCritical("[dev] E: Failed to open %s", uioDevice.constData());
-		return false;
-	}
-
-	m_regs = (volatile Registers*) mmap(NULL, m_regsSize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-
-	if(!m_regs || m_regs == MAP_FAILED)
-	{
-		m_regs = nullptr;
-		qCritical("[dev] E: Failed to mmap %s", uioDevice.constData());
-		return false;
-	}
-
-	// Initialize MDIO registers
-
-	const uint8_t *initSeq = (const uint8_t*) fdt_getprop(fdt, offset, "zbnt,init-seq", &length);
-
-	if(initSeq)
-	{
-		while(length >= 12)
-		{
-			uint32_t phyAddr, regAddr, value;
-
-			if(fdtArrayToVars(initSeq, length, phyAddr, regAddr, value))
-			{
-				if(phyAddr > 31) continue;
-
-				if(regAddr > 31)
-				{
-					writePhyIndirect(phyAddr, regAddr, value);
-				}
-				else
-				{
-					writePhy(phyAddr, regAddr, value);
-				}
-			}
-
-			length -= 12;
-			initSeq += 12;
-		}
-	}
-
-	close(fd);
-	return true;
-}
-
 uint32_t AxiMdio::readPhy(uint32_t phyAddr, uint32_t regAddr)
 {
-	if(!m_regs) return 0xFFFFFFFF;
-
 	m_regs->addr = OP_READ | (phyAddr << 5) | regAddr;
 	m_regs->ctl = CTL_ENABLE | CTL_START;
 
@@ -227,8 +179,6 @@ uint32_t AxiMdio::readPhyIndirect(uint32_t phyAddr, uint32_t regAddr)
 
 void AxiMdio::writePhy(uint32_t phyAddr, uint32_t regAddr, uint32_t value)
 {
-	if(!m_regs) return;
-
 	m_regs->addr = (phyAddr << 5) | regAddr;
 	m_regs->wr_data = value;
 	m_regs->ctl = CTL_ENABLE | CTL_START;

@@ -55,16 +55,16 @@ public:
 	};
 
 public:
-	LatencyMeasurer(const QByteArray &name, uint32_t index);
+	LatencyMeasurer(const QString &name, uint32_t id, void *regs, uint8_t portA, uint8_t portB);
 	~LatencyMeasurer();
+
+	static AbstractCore *createCore(AbstractDevice *parent, const QString &name, uint32_t id,
+	                                void *regs, const void *fdt, int offset);
 
 	void announce(QByteArray &output) const;
 
 	DeviceType getType() const;
 	uint64_t getPorts() const;
-
-	bool isReady() const;
-	bool loadDevice(const void *fdt, int offset);
 
 	void setReset(bool reset);
 	bool setProperty(PropertyID propID, const QByteArray &value);
@@ -72,7 +72,5 @@ public:
 
 private:
 	volatile Registers *m_regs;
-	size_t m_regsSize;
-
 	uint8_t m_portA, m_portB;
 };
