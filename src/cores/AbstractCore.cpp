@@ -23,6 +23,7 @@
 #include <cores/AxiMdio.hpp>
 #include <cores/FrameDetector.hpp>
 #include <cores/LatencyMeasurer.hpp>
+#include <cores/PrController.hpp>
 #include <cores/SimpleTimer.hpp>
 #include <cores/StatsCollector.hpp>
 #include <cores/TrafficGenerator.hpp>
@@ -33,6 +34,7 @@ const CoreConstructorMap AbstractCore::coreConstructors =
 	{"zbnt,axi-mdio",          AxiMdio::createCore},
 	{"zbnt,frame-detector",    FrameDetector::createCore},
 	{"zbnt,latency-measurer",  LatencyMeasurer::createCore},
+	{"zbnt,pr-controller",     PrController::createCore},
 	{"zbnt,simple-timer",      SimpleTimer::createCore},
 	{"zbnt,stats-collector",   StatsCollector::createCore},
 	{"zbnt,traffic-generator", TrafficGenerator::createCore}

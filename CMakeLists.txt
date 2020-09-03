@@ -48,10 +48,11 @@ set(ZBNT_SERVER_SRC
 	"src/cores/AbstractCore.cpp"
 	"src/cores/AxiDma.cpp"
 	"src/cores/AxiMdio.cpp"
-	"src/cores/SimpleTimer.cpp"
 	"src/cores/FrameDetector.cpp"
-	"src/cores/StatsCollector.cpp"
 	"src/cores/LatencyMeasurer.cpp"
+	"src/cores/PrController.cpp"
+	"src/cores/SimpleTimer.cpp"
+	"src/cores/StatsCollector.cpp"
 	"src/cores/TrafficGenerator.cpp"
 )
 

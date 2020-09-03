@@ -56,7 +56,7 @@ void AbstractDevice::clearInterrupts(uint16_t irq)
 	write(m_irqfd, &m_irq, sizeof(uint32_t));
 }
 
-const QString &AbstractDevice::activeBitstream()
+const QString &AbstractDevice::activeBitstream() const
 {
 	return m_activeBitstream;
 }

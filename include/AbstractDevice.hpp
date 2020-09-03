@@ -19,13 +19,14 @@
 #pragma once
 
 #include <DmaBuffer.hpp>
-#include <cores/AbstractCore.hpp>
 #include <cores/AxiDma.hpp>
 #include <cores/SimpleTimer.hpp>
 
 using CoreList = QVector<AbstractCore*>;
 using BitstreamList = QVector<QString>;
 using MmapList = QVector<QPair<void*, size_t>>;
+
+class AbstractCore;
 
 class AbstractDevice
 {
@@ -37,7 +38,7 @@ public:
 	void clearInterrupts(uint16_t irq);
 
 	virtual bool loadBitstream(const QString &name) = 0;
-	const QString &activeBitstream();
+	const QString &activeBitstream() const;
 
 	SimpleTimer *timer() const;
 	AxiDma *dmaEngine() const;
