@@ -38,14 +38,13 @@ public:
 	void clearInterrupts(uint16_t irq);
 
 	virtual bool loadBitstream(const QString &name) = 0;
-	const QString &activeBitstream() const;
+	virtual const QString &activeBitstream() const = 0;
+	virtual const BitstreamList &bitstreamList() const = 0;
 
 	SimpleTimer *timer() const;
 	AxiDma *dmaEngine() const;
 	const DmaBuffer *dmaBuffer() const;
-
 	const CoreList &coreList() const;
-	const BitstreamList &bitstreamList() const;
 
 protected:
 	int m_irqfd = -1;
@@ -55,9 +54,6 @@ protected:
 	DmaBuffer *m_dmaBuffer = nullptr;
 	SimpleTimer *m_timer = nullptr;
 
-	QString m_activeBitstream;
-
 	MmapList m_mmapList;
 	CoreList m_coreList;
-	BitstreamList m_bitstreamList;
 };

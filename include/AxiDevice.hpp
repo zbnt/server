@@ -30,10 +30,15 @@ public:
 	~AxiDevice();
 
 	bool loadBitstream(const QString &name);
+	const QString &activeBitstream() const;
+	const BitstreamList &bitstreamList() const;
 
 private:
 	bool loadDeviceTree(const QString &name, const QByteArray &contents);
 
 private:
 	QHash<QString, QByteArray> m_uioMap;
+
+	QString m_activeBitstream;
+	BitstreamList m_bitstreamList;
 };

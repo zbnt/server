@@ -56,11 +56,6 @@ void AbstractDevice::clearInterrupts(uint16_t irq)
 	write(m_irqfd, &m_irq, sizeof(uint32_t));
 }
 
-const QString &AbstractDevice::activeBitstream() const
-{
-	return m_activeBitstream;
-}
-
 SimpleTimer *AbstractDevice::timer() const
 {
 	return m_timer;
@@ -79,9 +74,4 @@ const DmaBuffer *AbstractDevice::dmaBuffer() const
 const CoreList &AbstractDevice::coreList() const
 {
 	return m_coreList;
-}
-
-const BitstreamList &AbstractDevice::bitstreamList() const
-{
-	return m_bitstreamList;
 }

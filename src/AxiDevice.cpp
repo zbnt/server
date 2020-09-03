@@ -377,6 +377,16 @@ bool AxiDevice::loadBitstream(const QString &name)
 	return true;
 }
 
+const QString &AxiDevice::activeBitstream() const
+{
+	return m_activeBitstream;
+}
+
+const BitstreamList &AxiDevice::bitstreamList() const
+{
+	return m_bitstreamList;
+}
+
 bool AxiDevice::loadDeviceTree(const QString &name, const QByteArray &contents)
 {
 	QDir configfsDir(ZBNT_CONFIGFS_PATH "/device-tree/overlays");
