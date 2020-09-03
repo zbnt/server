@@ -66,7 +66,7 @@ AxiDevice::AxiDevice()
 
 	if(!loadBitstream(m_bitstreamList[0]))
 	{
-		qFatal("[dev] F: Failed to load initial bitstream.");
+		qFatal("[dev] F: Failed to load initial bitstream");
 	}
 }
 

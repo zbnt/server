@@ -21,6 +21,8 @@
 #include <unistd.h>
 #include <poll.h>
 
+#include <QFile>
+
 AbstractDevice::AbstractDevice()
 { }
 
@@ -74,4 +76,26 @@ const DmaBuffer *AbstractDevice::dmaBuffer() const
 const CoreList &AbstractDevice::coreList() const
 {
 	return m_coreList;
+}
+
+QByteArray AbstractDevice::dumpFile(const QString &path, bool *ok)
+{
+	QFile dumpedFile(path);
+
+	if(!dumpedFile.open(QIODevice::ReadOnly))
+	{
+		if(ok)
+		{
+			*ok = false;
+		}
+
+		return "";
+	}
+
+	if(ok)
+	{
+		*ok = true;
+	}
+
+	return dumpedFile.readAll();
 }

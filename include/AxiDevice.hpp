@@ -23,6 +23,8 @@
 
 #include <AbstractDevice.hpp>
 
+using MmapList = QVector<QPair<void*, size_t>>;
+
 class AxiDevice : public AbstractDevice
 {
 public:
@@ -38,6 +40,7 @@ private:
 
 private:
 	QHash<QString, QByteArray> m_uioMap;
+	MmapList m_mmapList;
 
 	QString m_activeBitstream;
 	BitstreamList m_bitstreamList;
