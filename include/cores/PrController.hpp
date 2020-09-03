@@ -33,6 +33,7 @@ public:
 	static constexpr uint32_t CMD_USER_CONTROL   = 0b100;
 
 	static constexpr uint32_t ST_SHUTDOWN        = 1u << 7;
+	static constexpr uint32_t ST_LOADING         = 0b100;
 	static constexpr uint32_t ST_ACTIVE_OKAY     = 0b111;
 
 	static constexpr uint32_t TRIGGER_PENDING    = 1u << 31;
@@ -54,8 +55,9 @@ public:
 
 	DeviceType getType() const;
 
+	uint32_t status() const;
 	bool loadBitstream(const QString &name);
-	const QString &activeBitstream() const;
+	int activeBitstream() const;
 	const BitstreamList bitstreamList() const;
 
 	void setReset(bool reset);

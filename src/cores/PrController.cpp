@@ -84,6 +84,11 @@ DeviceType PrController::getType() const
 	return DEV_PR_CONTROLLER;
 }
 
+uint32_t PrController::status() const
+{
+	return m_regs->status;
+}
+
 bool PrController::loadBitstream(const QString &name)
 {
 	int idx = m_bitstreamNames.indexOf(name);
@@ -100,26 +105,26 @@ bool PrController::loadBitstream(const QString &name)
 	}
 
 	m_regs->trigger = idx;
+	usleep(100000);
 
-	do
+	while(1)
 	{
+		uint32_t status = m_regs->status;
+
+		if(!(status & TRIGGER_PENDING) && (status & 0b111) != ST_LOADING)
+		{
+			break;
+		}
+
 		usleep(1000);
 	}
-	while(m_regs->status & TRIGGER_PENDING);
 
 	return ((m_regs->status & 0xFF) == ST_ACTIVE_OKAY);
 }
 
-const QString &PrController::activeBitstream() const
+int PrController::activeBitstream() const
 {
-	int32_t offset = (m_regs->status >> 8) & 0xFFFF;
-
-	if(offset > m_bitstreamNames.size())
-	{
-		offset = 0;
-	}
-
-	return m_bitstreamNames[offset];
+	return (m_regs->status >> 8) & 0xFFFF;
 }
 
 const BitstreamList PrController::bitstreamList() const
