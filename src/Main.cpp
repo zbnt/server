@@ -16,17 +16,13 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <stdint.h>
-#include <fcntl.h>
-#include <sys/mman.h>
+#include <memory>
 
 #include <QCoreApplication>
 #include <QThread>
 
 #include <AxiDevice.hpp>
+#include <PciDevice.hpp>
 #include <Version.hpp>
 #include <ZbntTcpServer.hpp>
 
@@ -53,10 +49,13 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
+	std::unique_ptr<AbstractDevice> dev;
+	std::unique_ptr<ZbntServer> server;
+
 	if(config[0] == "axi")
 	{
 #if defined(__arm__) || defined(__aarch64__)
-		if(!configStr.length() || config.length() > 2)
+		if(config.length() > 2)
 		{
 			qCritical("[cfg] F: Invalid configuration string");
 			return 1;
@@ -76,10 +75,8 @@ int main(int argc, char **argv)
 			return 1;
 		}
 
-		std::unique_ptr<AbstractDevice> dev(new AxiDevice());
-		std::unique_ptr<ZbntServer> server(new ZbntTcpServer(port, dev.get()));
-
-		return app.exec();
+		dev = std::make_unique<AxiDevice>();
+		server = std::make_unique<ZbntTcpServer>(port, dev.get());
 #else
 		qCritical("[cfg] F: Mode AXI requires running in a Zynq/ZynqMP device");
 		return 1;
@@ -87,7 +84,42 @@ int main(int argc, char **argv)
 	}
 	else
 	{
-		qCritical("[cfg] F: PCI mode not implemented yet");
-		return 1;
+		if(config.length() < 3 || config.length() > 4)
+		{
+			qCritical("[cfg] F: Invalid configuration string");
+			return 1;
+		}
+
+		if(config[2] == "tcp")
+		{
+			bool ok = true;
+			quint16 port = 0;
+
+			if(config.length() == 4)
+			{
+				port = config[3].toUShort(&ok);
+			}
+
+			if(!ok)
+			{
+				qCritical("[cfg] F: Invalid port specified");
+				return 1;
+			}
+
+			dev = std::make_unique<PciDevice>(config[1].toString());
+			server = std::make_unique<ZbntTcpServer>(port, dev.get());
+		}
+		else if(config[2] == "local")
+		{
+			qCritical("[cfg] F: Local socket mode not yet implemented");
+			return 1;
+		}
+		else
+		{
+			qCritical("[cfg] F: Invalid socket type requested, valid values: TCP, local");
+			return 1;
+		}
 	}
+
+	return app.exec();
 }

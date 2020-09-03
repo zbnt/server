@@ -40,6 +40,7 @@ set(ZBNT_SERVER_SRC
 
 	"src/AbstractDevice.cpp"
 	"src/AxiDevice.cpp"
+	"src/PciDevice.cpp"
 
 	"server-shared/src/MessageUtils.cpp"
 	"server-shared/src/MessageReceiver.cpp"
