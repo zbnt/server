@@ -112,7 +112,7 @@ bool PrController::loadBitstream(const QString &name)
 
 const QString &PrController::activeBitstream() const
 {
-	uint32_t offset = (m_regs->status >> 8) & 0xFFFF;
+	int32_t offset = (m_regs->status >> 8) & 0xFFFF;
 
 	if(offset > m_bitstreamNames.size())
 	{
