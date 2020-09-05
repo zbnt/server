@@ -65,7 +65,7 @@ void AxiDma::clearInterrupts(uint16_t irq)
 
 void AxiDma::startTransfer()
 {
-	m_regs->irq_enable = IRQ_MEM_END | IRQ_TIMEOUT | IRQ_AXI_ERROR;
+	m_regs->irq_enable = IRQ_ALL;
 	m_regs->config = CFG_ENABLE;
 }
 
@@ -76,7 +76,7 @@ void AxiDma::stopTransfer()
 
 void AxiDma::flushFifo()
 {
-	m_regs->config |= CFG_FLUSH_FIFO;
+	m_regs->config |= CFG_FLUSH_REQ;
 }
 
 void AxiDma::setReset(bool reset)
@@ -121,7 +121,22 @@ uint32_t AxiDma::getBytesWritten() const
 	return m_regs->bytes_written;
 }
 
-bool AxiDma::isFifoEmpty() const
+bool AxiDma::isFlushDone() const
 {
-	return !!(m_regs->status & ST_FIFO_EMPTY);
+	return !!(m_regs->status & ST_FLUSH_ACK);
+}
+
+bool AxiDma::isFifoActive() const
+{
+	return !!(m_regs->status & ST_FIFO_ACTIVE);
+}
+
+bool AxiDma::isIoActive() const
+{
+	return !!(m_regs->status & ST_IO_ACTIVE);
+}
+
+bool AxiDma::isActive() const
+{
+	return !!(m_regs->status & (ST_IO_ACTIVE | ST_FIFO_ACTIVE));
 }

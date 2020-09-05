@@ -54,6 +54,8 @@ void ZbntServer::startRun()
 {
 	if(m_isRunning) return;
 
+	m_lastDmaIdx = 0;
+	m_pendingDmaData.clear();
 	m_device->dmaEngine()->startTransfer();
 
 	if(clientAvailable())
@@ -80,9 +82,15 @@ void ZbntServer::stopRun()
 		QThread::usleep(100);
 		checkInterrupt();
 	}
-	while(!m_device->dmaEngine()->isFifoEmpty());
+	while(!m_device->dmaEngine()->isFlushDone());
 
 	m_device->dmaEngine()->stopTransfer();
+
+	do
+	{
+		QThread::usleep(100);
+	}
+	while(m_device->dmaEngine()->isActive());
 
 	if(m_device->waitForInterrupt(0))
 	{

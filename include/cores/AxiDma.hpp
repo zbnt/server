@@ -28,17 +28,18 @@ class AxiDma : public AbstractCore
 public:
 	static constexpr uint32_t CFG_ENABLE     = 1;
 	static constexpr uint32_t CFG_RESET      = 2;
-	static constexpr uint32_t CFG_FLUSH_FIFO = 4;
+	static constexpr uint32_t CFG_FLUSH_REQ  = 4;
 
-	static constexpr uint32_t ST_BUSY        = 1;
+	static constexpr uint32_t ST_IO_ACTIVE   = 1;
 	static constexpr uint32_t ST_ERROR_SLV   = 2;
 	static constexpr uint32_t ST_ERROR_DEC   = 4;
-	static constexpr uint32_t ST_FIFO_EMPTY  = 8;
+	static constexpr uint32_t ST_FLUSH_ACK   = 8;
+	static constexpr uint32_t ST_FIFO_ACTIVE = 16;
 
 	static constexpr uint32_t IRQ_MEM_END    = 1;
-	static constexpr uint32_t IRQ_TIMEOUT    = 2;
+	static constexpr uint32_t IRQ_MSG_END    = 2;
 	static constexpr uint32_t IRQ_AXI_ERROR  = 4;
-	static constexpr uint32_t IRQ_ALL        = IRQ_MEM_END | IRQ_TIMEOUT | IRQ_AXI_ERROR;
+	static constexpr uint32_t IRQ_ALL        = IRQ_MEM_END | IRQ_MSG_END | IRQ_AXI_ERROR;
 
 	struct Registers
 	{
@@ -74,7 +75,10 @@ public:
 	uint16_t getActiveInterrupts() const;
 	uint32_t getLastMessageEnd() const;
 	uint32_t getBytesWritten() const;
-	bool isFifoEmpty() const;
+	bool isFlushDone() const;
+	bool isFifoActive() const;
+	bool isIoActive() const;
+	bool isActive() const;
 
 private:
 	volatile Registers *m_regs;
