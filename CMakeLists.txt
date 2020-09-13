@@ -35,6 +35,7 @@ set(ZBNT_SERVER_SRC
 	"src/DiscoveryServer.cpp"
 	"src/DmaBuffer.cpp"
 	"src/FdtUtils.cpp"
+	"src/IrqThread.cpp"
 	"src/ZbntServer.cpp"
 	"src/ZbntTcpServer.cpp"
 
@@ -57,9 +58,15 @@ set(ZBNT_SERVER_SRC
 	"src/cores/TrafficGenerator.cpp"
 )
 
+set(ZBNT_SERVER_HDR
+	"include/IrqThread.hpp"
+)
+
 set_source_files_properties("${CMAKE_BINARY_DIR}/Version.cpp" PROPERTIES GENERATED 1)
 
-add_executable(zbnt_server ${ZBNT_SERVER_SRC})
+qt5_wrap_cpp(ZBNT_SERVER_SRC_MOC ${ZBNT_SERVER_HDR})
+
+add_executable(zbnt_server ${ZBNT_SERVER_SRC} ${ZBNT_SERVER_SRC_MOC})
 add_dependencies(zbnt_server gen_version)
 target_link_libraries(zbnt_server Qt5::Core Qt5::Network ${libfdt} -lpthread)
 target_include_directories(zbnt_server PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/server-shared/include" "${CMAKE_BINARY_DIR}")

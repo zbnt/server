@@ -22,29 +22,25 @@
 #include <QNetworkInterface>
 
 #include <AbstractDevice.hpp>
+#include <IrqThread.hpp>
 #include <MessageUtils.hpp>
 
 ZbntServer::ZbntServer(AbstractDevice *parent)
 	: QObject(nullptr), m_device(parent)
 {
-	m_dmaTimer = new QTimer(this);
 	m_helloTimer = new QTimer(this);
-	m_runEndTimer = new QTimer(this);
-
-	m_dmaTimer->setInterval(0);
-	m_dmaTimer->setSingleShot(false);
-	m_dmaTimer->start();
-
 	m_helloTimer->setInterval(MSG_HELLO_TIMEOUT);
 	m_helloTimer->setSingleShot(true);
 
+	m_runEndTimer = new QTimer(this);
 	m_runEndTimer->setInterval(2000);
 	m_runEndTimer->setSingleShot(false);
-	m_runEndTimer->start();
 
-	connect(m_dmaTimer, &QTimer::timeout, this, &ZbntServer::checkInterrupt);
+	connect(parent->irqThread(), &IrqThread::interrupted, this, &ZbntServer::handleInterrupt, Qt::BlockingQueuedConnection);
 	connect(m_helloTimer, &QTimer::timeout, this, &ZbntServer::onHelloTimeout);
 	connect(m_runEndTimer, &QTimer::timeout, this, &ZbntServer::pollTimer);
+
+	m_runEndTimer->start();
 }
 
 ZbntServer::~ZbntServer()
@@ -80,7 +76,6 @@ void ZbntServer::stopRun()
 	do
 	{
 		QThread::usleep(100);
-		checkInterrupt();
 	}
 	while(!m_device->dmaEngine()->isFlushDone());
 
@@ -92,10 +87,7 @@ void ZbntServer::stopRun()
 	}
 	while(m_device->dmaEngine()->isActive());
 
-	if(m_device->waitForInterrupt(0))
-	{
-		m_device->clearInterrupts(m_device->dmaEngine()->getActiveInterrupts());
-	}
+	m_device->dmaEngine()->clearInterrupts(m_device->dmaEngine()->getActiveInterrupts());
 
 	// Reset the AXI timer
 
@@ -284,36 +276,33 @@ void ZbntServer::onMessageReceived(quint16 id, const QByteArray &data)
 	}
 }
 
-void ZbntServer::checkInterrupt()
+void ZbntServer::handleInterrupt()
 {
-	if(m_device->waitForInterrupt(0))
+	uint8_t *buffer = m_device->dmaBuffer()->getVirtualAddr();
+	uint32_t bufferSize = m_device->dmaBuffer()->getSize();
+	uint32_t msgEnd = m_device->dmaEngine()->getLastMessageEnd();
+	uint16_t irq = m_device->dmaEngine()->getActiveInterrupts();
+
+	if(clientAvailable())
 	{
-		uint8_t *buffer = m_device->dmaBuffer()->getVirtualAddr();
-		uint32_t bufferSize = m_device->dmaBuffer()->getSize();
-		uint32_t msgEnd = m_device->dmaEngine()->getLastMessageEnd();
-		uint16_t irq = m_device->dmaEngine()->getActiveInterrupts();
-
-		if(clientAvailable())
-		{
-			sendBytes(m_pendingDmaData);
-			sendBytes(buffer + m_lastDmaIdx, msgEnd - m_lastDmaIdx);
-		}
-
-		m_pendingDmaData.clear();
-		m_lastDmaIdx = msgEnd;
-
-		if(irq & AxiDma::IRQ_MEM_END)
-		{
-			m_lastDmaIdx = 0;
-
-			if(msgEnd != bufferSize)
-			{
-				m_pendingDmaData.append((char*) buffer + msgEnd, bufferSize - msgEnd);
-			}
-		}
-
-		m_device->clearInterrupts(irq);
+		sendBytes(m_pendingDmaData);
+		sendBytes(buffer + m_lastDmaIdx, msgEnd - m_lastDmaIdx);
 	}
+
+	m_pendingDmaData.clear();
+	m_lastDmaIdx = msgEnd;
+
+	if(irq & AxiDma::IRQ_MEM_END)
+	{
+		m_lastDmaIdx = 0;
+
+		if(msgEnd != bufferSize)
+		{
+			m_pendingDmaData.append((char*) buffer + msgEnd, bufferSize - msgEnd);
+		}
+	}
+
+	m_device->dmaEngine()->clearInterrupts(irq);
 }
 
 void ZbntServer::pollTimer()

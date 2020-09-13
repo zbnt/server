@@ -29,8 +29,8 @@ public:
 	AxiDevice();
 	~AxiDevice();
 
-	bool waitForInterrupt(int timeout);
-	void clearInterrupts(uint16_t irq);
+	bool waitForInterrupt();
+	void clearInterrupts();
 
 	bool loadBitstream(const QString &name);
 	const QString &activeBitstream() const;
@@ -41,7 +41,6 @@ private:
 
 private:
 	int m_irqfd = -1;
-	uint32_t m_irq = 0;
 
 	QHash<QString, QByteArray> m_uioMap;
 	MmapList m_mmapList;

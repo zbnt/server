@@ -20,7 +20,6 @@
 
 #include <unistd.h>
 #include <fcntl.h>
-#include <poll.h>
 #include <sys/mman.h>
 #include <sys/ioctl.h>
 #include <sys/eventfd.h>
@@ -30,6 +29,7 @@
 #include <QDirIterator>
 
 #include <FdtUtils.hpp>
+#include <IrqThread.hpp>
 
 PciDevice::PciDevice(const QString &device)
 {
@@ -117,7 +117,7 @@ PciDevice::PciDevice(const QString &device)
 
 			qInfo("[dev] I: Found region %u with size %llu KiB", regInfo.index, regInfo.size / 1024);
 
-			m_memMaps.append({ptr, regInfo.size});
+			m_memMaps.append({ptr, size_t(regInfo.size)});
 		}
 
 		if(i == VFIO_PCI_CONFIG_REGION_INDEX)
@@ -206,7 +206,7 @@ PciDevice::PciDevice(const QString &device)
 	setIrq->start = 0;
 	setIrq->count = 1;
 
-	m_irqfd = eventfd(0, EFD_NONBLOCK);
+	m_irqfd = eventfd(0, 0);
 	*setIrqFd = m_irqfd;
 
 	ioctl(m_device, VFIO_DEVICE_SET_IRQS, setIrq);
@@ -326,6 +326,11 @@ PciDevice::PciDevice(const QString &device)
 		qFatal("[dev] F: Failed to load initial bitstream");
 	}
 
+	// Create and start IrqThread
+
+	m_irqThread = new IrqThread(this);
+	m_irqThread->start();
+
 	// Enable DMA
 
 	uint16_t pciCommand;
@@ -353,24 +358,15 @@ PciDevice::~PciDevice()
 	}
 }
 
-bool PciDevice::waitForInterrupt(int timeout)
+bool PciDevice::waitForInterrupt()
 {
-	if(m_irqfd == -1) return false;
-	if(!m_dmaEngine) return false;
-	if(!m_dmaBuffer) return false;
-
-	Q_UNUSED(timeout);
-
 	uint64_t value;
-	return read(m_irqfd, &value, sizeof(value)) == sizeof(value);
+	return m_irqfd != -1 && read(m_irqfd, &value, sizeof(value)) == sizeof(value);
 }
 
-void PciDevice::clearInterrupts(uint16_t irq)
+void PciDevice::clearInterrupts()
 {
-	if(m_irqfd == -1) return;
-	if(!m_dmaEngine) return;
-
-	m_dmaEngine->clearInterrupts(irq);
+	// no-op
 }
 
 bool PciDevice::loadBitstream(const QString &name)

@@ -27,11 +27,14 @@
 
 #include <DmaBuffer.hpp>
 #include <FdtUtils.hpp>
+#include <IrqThread.hpp>
 #include <cores/AxiDma.hpp>
 #include <cores/SimpleTimer.hpp>
 
 AxiDevice::AxiDevice()
 {
+	// Enumerate available bitstreams
+
 	QDirIterator it(ZBNT_FIRMWARE_PATH, QDir::Files);
 
 	while(it.hasNext())
@@ -63,6 +66,12 @@ AxiDevice::AxiDevice()
 
 	std::sort(m_bitstreamList.begin(), m_bitstreamList.end());
 
+	// Create IrqThread
+
+	m_irqThread = new IrqThread(this);
+
+	// Load initial bitstream
+
 	qInfo("[dev] I: %d bitstreams found, using \"%s\" as default.", m_bitstreamList.size(), qUtf8Printable(m_bitstreamList[0]));
 
 	if(!loadBitstream(m_bitstreamList[0]))
@@ -74,38 +83,34 @@ AxiDevice::AxiDevice()
 AxiDevice::~AxiDevice()
 { }
 
-bool AxiDevice::waitForInterrupt(int timeout)
+bool AxiDevice::waitForInterrupt()
 {
-	if(m_irqfd == -1) return false;
-	if(!m_dmaEngine) return false;
-	if(!m_dmaBuffer) return false;
+	uint32_t value;
 
 	pollfd pfd;
 	pfd.fd = m_irqfd;
 	pfd.events = POLLIN;
 
-	if(poll(&pfd, 1, timeout) >= 1)
-	{
-		read(m_irqfd, &m_irq, sizeof(uint32_t));
-		return true;
-	}
-
-	return false;
+	return m_irqfd != -1 && poll(&pfd, 1, 1000) >= 1 && read(m_irqfd, &value, sizeof(value)) == sizeof(value);
 }
 
-void AxiDevice::clearInterrupts(uint16_t irq)
+void AxiDevice::clearInterrupts()
 {
-	if(m_irqfd == -1) return;
-	if(!m_dmaEngine) return;
-
-	m_dmaEngine->clearInterrupts(irq);
-
-	write(m_irqfd, &m_irq, sizeof(uint32_t));
+	if(m_irqfd != -1)
+	{
+		uint32_t value = 1;
+		write(m_irqfd, &value, sizeof(value));
+	}
 }
 
 bool AxiDevice::loadBitstream(const QString &name)
 {
 	qInfo("[dev] I: Loading bitstream: %s", qUtf8Printable(name));
+
+	// Stop IrqThread
+
+	m_irqThread->requestInterruption();
+	m_irqThread->wait();
 
 	// Clear devices
 
@@ -403,6 +408,10 @@ bool AxiDevice::loadBitstream(const QString &name)
 		qCritical("[core] E: No timer found in device tree");
 		return false;
 	}
+
+	// Start IrqThread
+
+	m_irqThread->start();
 
 	return true;
 }

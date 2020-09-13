@@ -42,7 +42,7 @@ protected:
 	void onMessageReceived(quint16 id, const QByteArray &data);
 
 private:
-	void checkInterrupt();
+	void handleInterrupt();
 	void pollTimer();
 
 protected:
@@ -52,7 +52,6 @@ protected:
 	bool m_helloReceived = false;
 
 private:
-	QTimer *m_dmaTimer = nullptr;
 	QTimer *m_runEndTimer = nullptr;
 	bool m_isRunning = false;
 

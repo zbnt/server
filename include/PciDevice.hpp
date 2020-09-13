@@ -43,8 +43,8 @@ public:
 	PciDevice(const QString &device);
 	~PciDevice();
 
-	bool waitForInterrupt(int timeout);
-	void clearInterrupts(uint16_t irq);
+	bool waitForInterrupt();
+	void clearInterrupts();
 
 	bool loadBitstream(const QString &name);
 	const QString &activeBitstream() const;

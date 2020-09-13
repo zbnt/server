@@ -16,37 +16,23 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <AbstractDevice.hpp>
-
 #include <IrqThread.hpp>
 
-AbstractDevice::AbstractDevice()
+IrqThread::IrqThread(AbstractDevice *device)
+	: m_device(device)
 { }
 
-AbstractDevice::~AbstractDevice()
+IrqThread::~IrqThread()
 { }
 
-SimpleTimer *AbstractDevice::timer() const
+void IrqThread::run()
 {
-	return m_timer;
-}
-
-AxiDma *AbstractDevice::dmaEngine() const
-{
-	return m_dmaEngine;
-}
-
-const DmaBuffer *AbstractDevice::dmaBuffer() const
-{
-	return m_dmaBuffer;
-}
-
-const IrqThread *AbstractDevice::irqThread() const
-{
-	return m_irqThread;
-}
-
-const CoreList &AbstractDevice::coreList() const
-{
-	return m_coreList;
+	while(!isInterruptionRequested())
+	{
+		if(m_device->waitForInterrupt())
+		{
+			emit interrupted();
+			m_device->clearInterrupts();
+		}
+	}
 }

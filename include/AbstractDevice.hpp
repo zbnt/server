@@ -27,6 +27,7 @@ using BitstreamList = QVector<QString>;
 using MmapList = QVector<QPair<void*, size_t>>;
 
 class AbstractCore;
+class IrqThread;
 
 class AbstractDevice
 {
@@ -34,8 +35,8 @@ public:
 	AbstractDevice();
 	virtual ~AbstractDevice();
 
-	virtual bool waitForInterrupt(int timeout) = 0;
-	virtual void clearInterrupts(uint16_t irq) = 0;
+	virtual bool waitForInterrupt() = 0;
+	virtual void clearInterrupts() = 0;
 
 	virtual bool loadBitstream(const QString &name) = 0;
 	virtual const QString &activeBitstream() const = 0;
@@ -44,12 +45,13 @@ public:
 	SimpleTimer *timer() const;
 	AxiDma *dmaEngine() const;
 	const DmaBuffer *dmaBuffer() const;
+	const IrqThread *irqThread() const;
 	const CoreList &coreList() const;
 
 protected:
 	AxiDma *m_dmaEngine = nullptr;
 	DmaBuffer *m_dmaBuffer = nullptr;
 	SimpleTimer *m_timer = nullptr;
-
+	IrqThread *m_irqThread = nullptr;
 	CoreList m_coreList;
 };

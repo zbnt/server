@@ -16,37 +16,25 @@
 	along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#pragma once
+
+#include <QThread>
+
 #include <AbstractDevice.hpp>
 
-#include <IrqThread.hpp>
-
-AbstractDevice::AbstractDevice()
-{ }
-
-AbstractDevice::~AbstractDevice()
-{ }
-
-SimpleTimer *AbstractDevice::timer() const
+class IrqThread : public QThread
 {
-	return m_timer;
-}
+	Q_OBJECT
 
-AxiDma *AbstractDevice::dmaEngine() const
-{
-	return m_dmaEngine;
-}
+public:
+	IrqThread(AbstractDevice *device);
+	~IrqThread();
 
-const DmaBuffer *AbstractDevice::dmaBuffer() const
-{
-	return m_dmaBuffer;
-}
+signals:
+	void interrupted();
 
-const IrqThread *AbstractDevice::irqThread() const
-{
-	return m_irqThread;
-}
+private:
+	void run();
 
-const CoreList &AbstractDevice::coreList() const
-{
-	return m_coreList;
-}
+	AbstractDevice *m_device;
+};
