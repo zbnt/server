@@ -20,7 +20,11 @@
 
 #include <unistd.h>
 #include <fcntl.h>
+#include <poll.h>
 #include <sys/mman.h>
+#include <sys/ioctl.h>
+#include <sys/eventfd.h>
+#include <linux/vfio.h>
 
 #include <QDebug>
 #include <QDirIterator>
@@ -29,77 +33,103 @@
 
 PciDevice::PciDevice(const QString &device)
 {
+	// Get IOMMU group for device
+
+	QFileInfo groupLink = "/sys/bus/pci/devices/" + device + "/iommu_group";
+
+	if(!groupLink.exists())
+	{
+		qFatal("[dev] F: No such PCI device: %s", qUtf8Printable(device));
+	}
+
 	bool ok = true;
-	QString uioPath = "/dev/" + device;
-	QString basePath = ZBNT_SYSFS_PATH "/class/uio/" + device;
+	int group = QFileInfo(groupLink.symLinkTarget()).fileName().toInt(&ok);
 
-	// Try to open the UIO device
-
-	m_irqfd = open(uioPath.toUtf8().constData(), O_RDWR | O_SYNC);
-
-	if(m_irqfd == -1)
+	if(!ok)
 	{
-		qFatal("[dev] F: Can't open device /dev/%s", qUtf8Printable(device));
+		qFatal("[dev] F: Can't get IOMMU group for device: %s", qUtf8Printable(device));
 	}
 
-	// Check the device's name
+	qInfo("[dev] I: Device %s is part of IOMMU group %d", qUtf8Printable(device), group);
 
-	QByteArray devName = dumpFile(basePath + "/name").trimmed();
+	// Create VFIO container
 
-	if(devName != "zbnt:pci")
+	m_container = open("/dev/vfio/vfio", O_RDWR);
+
+	if(m_container == -1)
 	{
-		qFatal("[dev] F: %s is not a ZBNT device", qUtf8Printable(device));
+		qFatal("[dev] F: Can't open /dev/vfio/vfio");
 	}
+
+	if(ioctl(m_container, VFIO_GET_API_VERSION) != VFIO_API_VERSION)
+	{
+		qFatal("[dev] F: Unknown VFIO API version");
+	}
+
+	if(!ioctl(m_container, VFIO_CHECK_EXTENSION, VFIO_TYPE1_IOMMU))
+	{
+		qFatal("[dev] F: No support for VFIO type 1");
+	}
+
+	// Open VFIO group
+
+	QString groupPath = QString("/dev/vfio/%1").arg(group);
+	m_group = open(groupPath.toUtf8().data(), O_RDWR);
+
+	if(m_group == -1)
+	{
+		qFatal("[dev] F: Can't open /dev/vfio/%d", group);
+	}
+
+	vfio_group_status groupStatus = {sizeof(groupStatus)};
+	ioctl(m_group, VFIO_GROUP_GET_STATUS, &groupStatus);
+
+	if(!(groupStatus.flags & VFIO_GROUP_FLAGS_VIABLE))
+	{
+		qFatal("[dev] F: Group %d is not ready", group);
+	}
+
+	ioctl(m_group, VFIO_GROUP_SET_CONTAINER, &m_container);
+	ioctl(m_container, VFIO_SET_IOMMU, VFIO_TYPE1_IOMMU);
+
+	m_device = ioctl(m_group, VFIO_GROUP_GET_DEVICE_FD, device.toUtf8().data());
 
 	// Enumerate memory maps
 
-	for(int i = 0; i < 5; ++i)
+	vfio_device_info devInfo = {sizeof(devInfo)};
+	ioctl(m_device, VFIO_DEVICE_GET_INFO, &devInfo);
+
+	for(uint32_t i = 0; i < devInfo.num_regions; ++i)
 	{
-		QString mapPath = (basePath + "/maps/map%1").arg(i);
+		vfio_region_info regInfo = {sizeof(regInfo)};
+		regInfo.index = i;
 
-		if(!QFile::exists(mapPath))
+		ioctl(m_device, VFIO_DEVICE_GET_REGION_INFO, &regInfo);
+
+		if(regInfo.flags & VFIO_REGION_INFO_FLAG_MMAP)
 		{
-			break;
+			void *ptr = mmap(NULL, regInfo.size, PROT_READ | PROT_WRITE, MAP_SHARED, m_device, regInfo.offset);
+
+			if(!ptr || ptr == MAP_FAILED)
+			{
+				continue;
+			}
+
+			qInfo("[dev] I: Found region %u with size %llu KiB", regInfo.index, regInfo.size / 1024);
+
+			m_memMaps.append({ptr, regInfo.size});
 		}
 
-		QByteArray mapName = dumpFile(mapPath + "/name").trimmed();
-		size_t mapSize = dumpFile(mapPath + "/size").trimmed().toULong(&ok, 16);
-
-		if(!mapName.size() || !ok)
+		if(i == VFIO_PCI_CONFIG_REGION_INDEX)
 		{
-			continue;
-		}
-
-		void *ptr = mmap(NULL, mapSize, PROT_READ | PROT_WRITE, MAP_SHARED, m_irqfd, i*getpagesize());
-
-		if(!ptr || ptr == MAP_FAILED)
-		{
-			continue;
-		}
-
-		m_uioMaps.insert(QString::fromUtf8(mapName), {ptr, mapSize});
-	}
-
-	for(const char *r : {"dmabuf_meta", "dmabuf", "static", "rp"})
-	{
-		if(!m_uioMaps.contains(r))
-		{
-			qFatal("[dev] F: Missing map %s", qUtf8Printable(device));
+			m_confRegion = regInfo.offset;
 		}
 	}
-
-	// Create DMA buffer
-
-	auto virtAddr = (uint8_t*) m_uioMaps["dmabuf"].first;
-	auto physAddr = *((uint64_t*) m_uioMaps["dmabuf_meta"].first);
-	auto size = m_uioMaps["dmabuf"].second;
-
-	m_dmaBuffer = new DmaBuffer("dmabuf0", virtAddr, physAddr, size);
 
 	// Load static partition header
 
 	RegionHeader stHeader;
-	memcpy(&stHeader, m_uioMaps["static"].first, sizeof(RegionHeader));
+	memcpy(&stHeader, m_memMaps[0].first, sizeof(RegionHeader));
 
 	if(memcmp(stHeader.magic, "ZBNT\x00", 5))
 	{
@@ -137,7 +167,50 @@ PciDevice::PciDevice(const QString &device)
 	}
 
 	QByteArray dtb(stHeader.dtb_size, 0);
-	memcpy(dtb.data(), makePointer<void>(m_uioMaps["static"].first, sizeof(RegionHeader)), stHeader.dtb_size);
+	memcpy(dtb.data(), makePointer<void>(m_memMaps[0].first, sizeof(RegionHeader)), stHeader.dtb_size);
+
+	// Create DMA buffer
+
+	vfio_iommu_type1_dma_map dmaMap;
+
+	dmaMap.argsz = sizeof(dmaMap);
+	dmaMap.vaddr = uint64_t(mmap(NULL, 0xA00000, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
+	dmaMap.size  = 0xA00000;
+	dmaMap.iova  = 0xA00000;
+	dmaMap.flags = VFIO_DMA_MAP_FLAG_READ | VFIO_DMA_MAP_FLAG_WRITE;
+
+	if((void*) dmaMap.vaddr == MAP_FAILED)
+	{
+		qFatal("[dmabuf] F: Failed to allocate DMA buffer");
+	}
+
+	ioctl(m_container, VFIO_IOMMU_MAP_DMA, &dmaMap);
+
+	m_dmaBuffer = new DmaBuffer("dmabuf0", (uint8_t*) dmaMap.vaddr, dmaMap.iova, dmaMap.size);
+
+	// Setup interrupt handler
+
+	uint8_t *setIrqMem = new uint8_t[sizeof(vfio_irq_set) + sizeof(int)];
+
+	if(!setIrqMem)
+	{
+		qFatal("[dev] Can't allocate vfio_irq_set");
+	}
+
+	vfio_irq_set *setIrq = (vfio_irq_set*) setIrqMem;
+	int *setIrqFd = (int*) (setIrqMem + sizeof(vfio_irq_set));
+
+	setIrq->argsz = sizeof(vfio_irq_set) + sizeof(int);
+	setIrq->flags = VFIO_IRQ_SET_DATA_EVENTFD | VFIO_IRQ_SET_ACTION_TRIGGER;
+	setIrq->index = VFIO_PCI_MSI_IRQ_INDEX;
+	setIrq->start = 0;
+	setIrq->count = 1;
+
+	m_irqfd = eventfd(0, EFD_NONBLOCK);
+	*setIrqFd = m_irqfd;
+
+	ioctl(m_device, VFIO_DEVICE_SET_IRQS, setIrq);
+	delete [] setIrqMem;
 
 	// Enumerate devices in static partition
 
@@ -196,7 +269,7 @@ PciDevice::PciDevice(const QString &device)
 
 				// Create core
 
-				void *regs = makePointer<void>(m_uioMaps["static"].first, base);
+				void *regs = makePointer<void>(m_memMaps[0].first, base);
 				AbstractCore *core = AbstractCore::createCore(this, compatible, name, 0, regs, fdt, offset);
 
 				if(!core)
@@ -246,20 +319,58 @@ PciDevice::PciDevice(const QString &device)
 
 	// Load initial bitstream
 
-	qInfo("[dev] I: Running on board %s, bitstream version: %s", qUtf8Printable(m_boardName), qUtf8Printable(version));
+	qInfo("[dev] I: Running on board %s, static bitstream version: %s", qUtf8Printable(m_boardName), qUtf8Printable(version));
 
 	if(!loadBitstream(m_bitstreamList[0]))
 	{
 		qFatal("[dev] F: Failed to load initial bitstream");
 	}
+
+	// Enable DMA
+
+	uint16_t pciCommand;
+	pread(m_device, &pciCommand, sizeof(pciCommand), m_confRegion + 0x4);
+
+	pciCommand |= 0b100;
+	pwrite(m_device, &pciCommand, sizeof(pciCommand), m_confRegion + 0x4);
 }
 
 PciDevice::~PciDevice()
 {
-	if(m_irqfd != -1)
+	for(auto &mm : m_memMaps)
 	{
-		close(m_irqfd);
+		munmap(mm.first, mm.second);
 	}
+
+	if(m_group != -1)
+	{
+		close(m_group);
+	}
+
+	if(m_container != -1)
+	{
+		close(m_container);
+	}
+}
+
+bool PciDevice::waitForInterrupt(int timeout)
+{
+	if(m_irqfd == -1) return false;
+	if(!m_dmaEngine) return false;
+	if(!m_dmaBuffer) return false;
+
+	Q_UNUSED(timeout);
+
+	uint64_t value;
+	return read(m_irqfd, &value, sizeof(value)) == sizeof(value);
+}
+
+void PciDevice::clearInterrupts(uint16_t irq)
+{
+	if(m_irqfd == -1) return;
+	if(!m_dmaEngine) return;
+
+	m_dmaEngine->clearInterrupts(irq);
 }
 
 bool PciDevice::loadBitstream(const QString &name)
@@ -292,7 +403,7 @@ bool PciDevice::loadBitstream(const QString &name)
 	// Load RP header
 
 	RegionHeader rpHeader;
-	memcpy(&rpHeader, m_uioMaps["rp"].first, sizeof(RegionHeader));
+	memcpy(&rpHeader, m_memMaps[1].first, sizeof(RegionHeader));
 
 	if(memcmp(rpHeader.magic, "ZBNT\x00", 5))
 	{
@@ -307,7 +418,7 @@ bool PciDevice::loadBitstream(const QString &name)
 	}
 
 	QByteArray dtb(rpHeader.dtb_size, 0);
-	memcpy(dtb.data(), makePointer<void>(m_uioMaps["rp"].first, sizeof(RegionHeader)), rpHeader.dtb_size);
+	memcpy(dtb.data(), makePointer<void>(m_memMaps[1].first, sizeof(RegionHeader)), rpHeader.dtb_size);
 
 	// Enumerate devices in reconfigurable partition
 
@@ -356,7 +467,7 @@ bool PciDevice::loadBitstream(const QString &name)
 
 				// Create core
 
-				void *regs = makePointer<void>(m_uioMaps["rp"].first, base);
+				void *regs = makePointer<void>(m_memMaps[1].first, base);
 				AbstractCore *core = AbstractCore::createCore(this, compatible, name, id, regs, fdt, offset);
 
 				if(!core)

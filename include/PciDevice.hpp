@@ -24,8 +24,6 @@
 #include <AbstractDevice.hpp>
 #include <cores/PrController.hpp>
 
-using MmapHash = QHash<QString, QPair<void*, size_t>>;
-
 class PciDevice : public AbstractDevice
 {
 	struct RegionHeader
@@ -45,12 +43,21 @@ public:
 	PciDevice(const QString &device);
 	~PciDevice();
 
+	bool waitForInterrupt(int timeout);
+	void clearInterrupts(uint16_t irq);
+
 	bool loadBitstream(const QString &name);
 	const QString &activeBitstream() const;
 	const BitstreamList &bitstreamList() const;
 
 private:
-	MmapHash m_uioMaps;
+	int m_container = -1;
+	int m_group = -1;
+	int m_device = -1;
+	int m_irqfd = -1;
+
+	off_t m_confRegion = 0;
+	MmapList m_memMaps;
 	QString m_boardName = "<unknown>";
 
 	PrController *m_prCtl = nullptr;

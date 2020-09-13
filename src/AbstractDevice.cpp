@@ -18,45 +18,11 @@
 
 #include <AbstractDevice.hpp>
 
-#include <unistd.h>
-#include <poll.h>
-
-#include <QFile>
-
 AbstractDevice::AbstractDevice()
 { }
 
 AbstractDevice::~AbstractDevice()
 { }
-
-bool AbstractDevice::waitForInterrupt(int timeout)
-{
-	if(m_irqfd == -1) return false;
-	if(!m_dmaEngine) return false;
-	if(!m_dmaBuffer) return false;
-
-	pollfd pfd;
-	pfd.fd = m_irqfd;
-	pfd.events = POLLIN;
-
-	if(poll(&pfd, 1, timeout) >= 1)
-	{
-		read(m_irqfd, &m_irq, sizeof(uint32_t));
-		return true;
-	}
-
-	return false;
-}
-
-void AbstractDevice::clearInterrupts(uint16_t irq)
-{
-	if(m_irqfd == -1) return;
-	if(!m_dmaEngine) return;
-
-	m_dmaEngine->clearInterrupts(irq);
-
-	write(m_irqfd, &m_irq, sizeof(uint32_t));
-}
 
 SimpleTimer *AbstractDevice::timer() const
 {
@@ -76,26 +42,4 @@ const DmaBuffer *AbstractDevice::dmaBuffer() const
 const CoreList &AbstractDevice::coreList() const
 {
 	return m_coreList;
-}
-
-QByteArray AbstractDevice::dumpFile(const QString &path, bool *ok)
-{
-	QFile dumpedFile(path);
-
-	if(!dumpedFile.open(QIODevice::ReadOnly))
-	{
-		if(ok)
-		{
-			*ok = false;
-		}
-
-		return "";
-	}
-
-	if(ok)
-	{
-		*ok = true;
-	}
-
-	return dumpedFile.readAll();
 }

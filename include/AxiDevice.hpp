@@ -23,13 +23,14 @@
 
 #include <AbstractDevice.hpp>
 
-using MmapList = QVector<QPair<void*, size_t>>;
-
 class AxiDevice : public AbstractDevice
 {
 public:
 	AxiDevice();
 	~AxiDevice();
+
+	bool waitForInterrupt(int timeout);
+	void clearInterrupts(uint16_t irq);
 
 	bool loadBitstream(const QString &name);
 	const QString &activeBitstream() const;
@@ -39,6 +40,9 @@ private:
 	bool loadDeviceTree(const QString &name, const QByteArray &contents);
 
 private:
+	int m_irqfd = -1;
+	uint32_t m_irq = 0;
+
 	QHash<QString, QByteArray> m_uioMap;
 	MmapList m_mmapList;
 

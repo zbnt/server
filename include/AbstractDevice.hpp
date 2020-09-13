@@ -24,6 +24,7 @@
 
 using CoreList = QVector<AbstractCore*>;
 using BitstreamList = QVector<QString>;
+using MmapList = QVector<QPair<void*, size_t>>;
 
 class AbstractCore;
 
@@ -33,8 +34,8 @@ public:
 	AbstractDevice();
 	virtual ~AbstractDevice();
 
-	bool waitForInterrupt(int timeout);
-	void clearInterrupts(uint16_t irq);
+	virtual bool waitForInterrupt(int timeout) = 0;
+	virtual void clearInterrupts(uint16_t irq) = 0;
 
 	virtual bool loadBitstream(const QString &name) = 0;
 	virtual const QString &activeBitstream() const = 0;
@@ -46,12 +47,6 @@ public:
 	const CoreList &coreList() const;
 
 protected:
-	static QByteArray dumpFile(const QString &path, bool *ok = nullptr);
-
-protected:
-	int m_irqfd = -1;
-	uint32_t m_irq = 0;
-
 	AxiDma *m_dmaEngine = nullptr;
 	DmaBuffer *m_dmaBuffer = nullptr;
 	SimpleTimer *m_timer = nullptr;

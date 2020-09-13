@@ -41,7 +41,7 @@ int main(int argc, char **argv)
 	qInfo("[zbnt] Running version %s", ZBNT_VERSION);
 
 	QString configStr = app.arguments()[1].toLower();
-	auto config = configStr.splitRef(":");
+	auto config = configStr.splitRef(",");
 
 	if(config[0] != "axi" && config[0] != "pci")
 	{

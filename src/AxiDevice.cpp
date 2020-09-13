@@ -20,6 +20,7 @@
 
 #include <unistd.h>
 #include <fcntl.h>
+#include <poll.h>
 #include <sys/mman.h>
 
 #include <QDirIterator>
@@ -72,6 +73,35 @@ AxiDevice::AxiDevice()
 
 AxiDevice::~AxiDevice()
 { }
+
+bool AxiDevice::waitForInterrupt(int timeout)
+{
+	if(m_irqfd == -1) return false;
+	if(!m_dmaEngine) return false;
+	if(!m_dmaBuffer) return false;
+
+	pollfd pfd;
+	pfd.fd = m_irqfd;
+	pfd.events = POLLIN;
+
+	if(poll(&pfd, 1, timeout) >= 1)
+	{
+		read(m_irqfd, &m_irq, sizeof(uint32_t));
+		return true;
+	}
+
+	return false;
+}
+
+void AxiDevice::clearInterrupts(uint16_t irq)
+{
+	if(m_irqfd == -1) return;
+	if(!m_dmaEngine) return;
+
+	m_dmaEngine->clearInterrupts(irq);
+
+	write(m_irqfd, &m_irq, sizeof(uint32_t));
+}
 
 bool AxiDevice::loadBitstream(const QString &name)
 {
