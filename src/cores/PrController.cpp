@@ -98,13 +98,7 @@ bool PrController::loadBitstream(const QString &name)
 		return false;
 	}
 
-	if(m_regs->status & ST_SHUTDOWN)
-	{
-		m_regs->status = CMD_RESTART;
-		usleep(1000);
-	}
-
-	m_regs->trigger = idx;
+	m_regs->trigger = 1u << idx;
 	usleep(100000);
 
 	while(1)
@@ -118,6 +112,8 @@ bool PrController::loadBitstream(const QString &name)
 
 		usleep(1000);
 	}
+
+	m_regs->trigger = 0;
 
 	return ((m_regs->status & 0xFF) == ST_ACTIVE_OKAY);
 }

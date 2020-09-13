@@ -26,22 +26,16 @@
 class PrController : public AbstractCore
 {
 public:
-	static constexpr uint32_t CMD_SHUTDOWN       = 0b000;
-	static constexpr uint32_t CMD_RESTART        = 0b001;
-	static constexpr uint32_t CMD_RESTART_STATUS = 0b010;
-	static constexpr uint32_t CMD_PROCEED        = 0b011;
-	static constexpr uint32_t CMD_USER_CONTROL   = 0b100;
+	static constexpr uint32_t ST_SHUTDOWN     = 1u << 7;
+	static constexpr uint32_t ST_LOADING      = 0b100;
+	static constexpr uint32_t ST_ACTIVE_OKAY  = 0b111;
 
-	static constexpr uint32_t ST_SHUTDOWN        = 1u << 7;
-	static constexpr uint32_t ST_LOADING         = 0b100;
-	static constexpr uint32_t ST_ACTIVE_OKAY     = 0b111;
-
-	static constexpr uint32_t TRIGGER_PENDING    = 1u << 31;
+	static constexpr uint32_t TRIGGER_PENDING = 1u << 31;
 
 	struct Registers
 	{
-		uint32_t status;
-		uint32_t trigger;
+		uint64_t status;
+		uint64_t trigger;
 	};
 
 public:
