@@ -1,15 +1,22 @@
 cmake_minimum_required(VERSION 3.7)
 project(zbnt_server)
 
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+	set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Type of build" FORCE)
+	set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+endif()
+
 find_package(Qt5 COMPONENTS Core Network REQUIRED)
 find_library(libfdt "libfdt.so")
 
 set(ZBNT_FALLBACK_VERSION "2.0.0-beta.2")
 set(CMAKE_CXX_STANDARD 14)
 
-option(USE_SANITIZERS "Compile with ASan and UBSan" OFF)
+option(ZYNQ_MODE      "Build for Zynq/ZynqMP devices" OFF)
+option(USE_SANITIZERS "Compile with ASan and UBSan"   OFF)
 
-set(FIRMWARE_PATH "/usr/lib/firmware/zbnt" CACHE PATH "Location of bitstream and device tree files")
+set(PROFILE_PATH  "/etc/zbnt"              CACHE PATH "Location of profile configuration files")
+set(FIRMWARE_PATH "/usr/lib/firmware/zbnt" CACHE PATH "Location of bitstream and device tree files (Zynq/ZynqMP)")
 set(SYSFS_PATH    "/sys"                   CACHE PATH "Path where sysfs is mounted")
 set(CONFIGFS_PATH "/sys/kernel/config"     CACHE PATH "Path where configfs is mounted")
 
@@ -42,8 +49,7 @@ set(ZBNT_SERVER_SRC
 	"src/ZbntLocalServer.cpp"
 
 	"src/AbstractDevice.cpp"
-	"src/AxiDevice.cpp"
-	"src/PciDevice.cpp"
+	"src/$<IF:$<BOOL:${ZYNQ_MODE}>,Axi,Pci>Device.cpp"
 
 	"server-shared/src/MessageUtils.cpp"
 	"server-shared/src/MessageReceiver.cpp"
@@ -75,6 +81,8 @@ target_include_directories(zbnt_server PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/inclu
 
 target_compile_definitions(
 	zbnt_server PUBLIC
+	ZBNT_ZYNQ_MODE=$<IF:$<BOOL:${ZYNQ_MODE}>,1,0>
+	ZBNT_PROFILE_PATH="${PROFILE_PATH}"
 	ZBNT_FIRMWARE_PATH="${FIRMWARE_PATH}"
 	ZBNT_SYSFS_PATH="${SYSFS_PATH}"
 	ZBNT_CONFIGFS_PATH="${CONFIGFS_PATH}"
