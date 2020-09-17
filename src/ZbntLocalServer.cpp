@@ -40,10 +40,10 @@ ZbntLocalServer::ZbntLocalServer(const QString &name, AbstractDevice *parent)
 
 	sockaddr_un sockAddr;
 	memset(&sockAddr, 0, sizeof(sockAddr));
-	snprintf(sockAddr.sun_path + 1, sizeof(sockAddr.sun_path) - 1, "/tmp/zbnt-local-%08llX", pid);
+	snprintf(sockAddr.sun_path + 1, sizeof(sockAddr.sun_path) - 1, "/tmp/zbnt-local-%016llX", pid);
 	sockAddr.sun_family = AF_UNIX;
 
-	if(bind(sock, (sockaddr*) &sockAddr, sizeof(sa_family_t) + 25) == -1)
+	if(bind(sock, (sockaddr*) &sockAddr, sizeof(sa_family_t) + 33) == -1)
 		qFatal("[net] F: Can't bind local socket");
 
 	if(listen(sock, m_server->maxPendingConnections()) == -1)
