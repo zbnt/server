@@ -444,6 +444,8 @@ bool PciDevice::loadBitstream(const QString &name)
 						qCritical("[core] E: Multiple timers found");
 						return false;
 					}
+
+					id = 0xFF;
 				}
 				else
 				{
