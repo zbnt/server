@@ -27,7 +27,7 @@
 class ZbntLocalServer : public ZbntServer
 {
 public:
-	ZbntLocalServer(AbstractDevice *parent);
+	ZbntLocalServer(const QString &name, AbstractDevice *parent);
 	~ZbntLocalServer();
 
 private:
@@ -44,5 +44,6 @@ private:
 private:
 	QLocalServer *m_server = nullptr;
 	QLocalSocket *m_client = nullptr;
+	DiscoveryServer *m_discoveryServer = nullptr;
 };
 

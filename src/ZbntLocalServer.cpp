@@ -25,9 +25,11 @@
 
 #include <MessageUtils.hpp>
 
-ZbntLocalServer::ZbntLocalServer(AbstractDevice *parent)
+ZbntLocalServer::ZbntLocalServer(const QString &name, AbstractDevice *parent)
 	: ZbntServer(parent)
 {
+	// Setup local socket
+
 	m_server = new QLocalServer(this);
 
 	qintptr sock = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -51,6 +53,26 @@ ZbntLocalServer::ZbntLocalServer(AbstractDevice *parent)
 		qFatal("[net] F: Can't listen on local socket");
 
 	qInfo("[net] I: Listening on %s", qUtf8Printable(m_server->serverName()));
+
+	// Setup discovery server
+
+	for(const QNetworkInterface &iface : QNetworkInterface::allInterfaces())
+	{
+		if(!(iface.flags() & QNetworkInterface::IsUp))
+			continue;
+
+		switch(iface.type())
+		{
+			case QNetworkInterface::Loopback:
+			{
+				m_discoveryServer = new DiscoveryServer(name, this);
+			}
+
+			default: { }
+		}
+	}
+
+	// Connect signals
 
 	connect(m_server, &QLocalServer::newConnection, this, &ZbntLocalServer::onIncomingConnection);
 }
