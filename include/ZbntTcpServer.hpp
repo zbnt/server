@@ -27,7 +27,7 @@
 class ZbntTcpServer : public ZbntServer
 {
 public:
-	ZbntTcpServer(quint16 port, AbstractDevice *parent);
+	ZbntTcpServer(const QHostAddress &address, quint16 port, AbstractDevice *parent);
 	~ZbntTcpServer();
 
 private:

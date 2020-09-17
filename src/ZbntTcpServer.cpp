@@ -22,31 +22,95 @@
 
 #include <MessageUtils.hpp>
 
-ZbntTcpServer::ZbntTcpServer(quint16 port, AbstractDevice *parent)
+ZbntTcpServer::ZbntTcpServer(const QHostAddress &address, quint16 port, AbstractDevice *parent)
 	: ZbntServer(parent)
 {
+	// Setup TCP socket
+
 	m_server = new QTcpServer(this);
 
-	if(!m_server->listen(QHostAddress::Any, port))
+	if(address.isNull())
+		qFatal("[net] F: Invalid address requested");
+
+	if(!m_server->listen(address, port))
 		qFatal("[net] F: Can't listen on TCP port");
 
-	qInfo("[net] I: Listening on TCP port %d", m_server->serverPort());
+	switch(address.protocol())
+	{
+		case QAbstractSocket::IPv4Protocol:
+		{
+			qInfo("[net] I: Listening on %s:%d", qUtf8Printable(address.toString()), m_server->serverPort());
+			break;
+		}
+
+		case QAbstractSocket::IPv6Protocol:
+		{
+			qInfo("[net] I: Listening on [%s]:%d", qUtf8Printable(address.toString()), m_server->serverPort());
+			break;
+		}
+
+		default:
+		{
+			qInfo("[net] I: Listening on port %d", m_server->serverPort());
+			break;
+		}
+	}
+
+	// Setup discovery servers
+
+	QString addressScope = address.scopeId();
 
 	for(const QNetworkInterface &iface : QNetworkInterface::allInterfaces())
 	{
+		if(addressScope.length() && iface.name() != addressScope)
+			continue;
+
+		if(!addressScope.length() && !(iface.flags() & QNetworkInterface::IsUp))
+			continue;
+
 		switch(iface.type())
 		{
 			case QNetworkInterface::Ethernet:
 			case QNetworkInterface::Wifi:
-			case QNetworkInterface::Virtual:
 			{
-				m_discoveryServers.append(new DiscoveryServer(iface, m_server->serverPort()));
-				m_discoveryServers.append(new DiscoveryServer(iface, m_server->serverPort(), true));
+				break;
 			}
 
-			default: { }
+			default:
+			{
+				continue;
+			}
+		}
+
+		if(address != QHostAddress::Any && address != QHostAddress::AnyIPv4 && address != QHostAddress::AnyIPv6)
+		{
+			bool valid = false;
+
+			for(const QNetworkAddressEntry &ifaceAddr : iface.addressEntries())
+			{
+				if(address.isInSubnet(ifaceAddr.ip(), ifaceAddr.prefixLength()))
+				{
+					valid = true;
+					break;
+				}
+			}
+
+			if(!valid)
+				continue;
+		}
+
+		if(address.protocol() != QAbstractSocket::IPv6Protocol)
+		{
+			m_discoveryServers.append(new DiscoveryServer(iface, m_server->serverPort(), false, this));
+		}
+
+		if(address.protocol() != QAbstractSocket::IPv4Protocol)
+		{
+			m_discoveryServers.append(new DiscoveryServer(iface, m_server->serverPort(), true, this));
 		}
 	}
+
+	// Connect signals
 
 	connect(m_server, &QTcpServer::newConnection, this, &ZbntTcpServer::onIncomingConnection);
 }
