@@ -36,8 +36,10 @@ set(ZBNT_SERVER_SRC
 	"src/DmaBuffer.cpp"
 	"src/FdtUtils.cpp"
 	"src/IrqThread.cpp"
+
 	"src/ZbntServer.cpp"
 	"src/ZbntTcpServer.cpp"
+	"src/ZbntLocalServer.cpp"
 
 	"src/AbstractDevice.cpp"
 	"src/AxiDevice.cpp"

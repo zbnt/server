@@ -18,7 +18,6 @@
 
 #include <ZbntTcpServer.hpp>
 
-#include <QThread>
 #include <QNetworkInterface>
 
 #include <MessageUtils.hpp>
