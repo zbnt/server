@@ -19,107 +19,113 @@
 #include <memory>
 
 #include <QCoreApplication>
-#include <QThread>
+#include <QFileInfo>
+#include <QRegularExpression>
+#include <QSettings>
 
 #include <AxiDevice.hpp>
 #include <PciDevice.hpp>
+#include <CfgUtils.hpp>
 #include <Version.hpp>
 #include <ZbntTcpServer.hpp>
+#include <ZbntLocalServer.hpp>
 
 int main(int argc, char **argv)
 {
 	QCoreApplication app(argc, argv);
 
-	// Load config
-
 	if(argc != 2)
 	{
-		qCritical("Usage: zbnt_server [config]");
+		qCritical("Usage: zbnt_server [profile]");
 		return 1;
 	}
+
+	// Open profile configuration file
+
+	QString profile = argv[1];
+
+	if(!profile.length() || profile.indexOf('/') != -1)
+	{
+		qCritical("[cfg] F: Invalid profile name");
+		return 1;
+	}
+
+	QString cfgFile(ZBNT_PROFILE_PATH "/" + profile + ".cfg");
+
+	if(!QFileInfo::exists(cfgFile))
+	{
+		qCritical("[cfg] F: Configuration file not found: %s", qUtf8Printable(cfgFile));
+		return 1;
+	}
+
+	QSettings settings(ZBNT_PROFILE_PATH "/" + profile + ".cfg", QSettings::IniFormat);
 
 	qInfo("[zbnt] Running version %s", ZBNT_VERSION);
+	qInfo("[cfg] Using settings in file %s", qUtf8Printable(cfgFile));
 
-	QString configStr = app.arguments()[1].toLower();
-	auto config = configStr.splitRef(",");
+	// Load device-related settings
 
-	if(config[0] != "axi" && config[0] != "pci")
+	std::unique_ptr<AbstractDevice> dev;
+
+#if ZBNT_ZYNQ_MODE
+	dev = std::make_unique<AxiDevice>();
+#else
+	qInfo("[cfg] Loading device settings");
+
+	settings.beginGroup("device");
+
+	QString slot;
+	readSetting(settings, "pci-slot", slot);
+	slot = slot.toLower();
+
+	if(!slot.contains(QRegularExpression("^[0-9a-f]{4}(?:\\:[0-9a-f]{2}){2}\\.[0-9]$")))
 	{
-		qCritical("[cfg] F: Invalid mode requested, valid values: AXI, PCI");
+		qCritical("[cfg] F: Invalid value for setting: pci-slot");
 		return 1;
 	}
 
-	std::unique_ptr<AbstractDevice> dev;
+	dev = std::make_unique<PciDevice>(slot);
+
+	settings.endGroup();
+#endif
+
+	// Load server-related settings
+
 	std::unique_ptr<ZbntServer> server;
 
-	if(config[0] == "axi")
+	qInfo("[cfg] Loading server settings");
+
+	settings.beginGroup("server");
+
+	QString type;
+	readSetting(settings, "type", type);
+	type = type.toLower();
+
+	if(type == "tcp")
 	{
-#if defined(__arm__) || defined(__aarch64__)
-		if(config.length() > 2)
-		{
-			qCritical("[cfg] F: Invalid configuration string");
-			return 1;
-		}
+		QString address;
+		quint16 port;
 
-		bool ok = true;
-		quint16 port = 0;
+		readSetting(settings, "address", address, QString("::"));
+		readSetting(settings, "port", port, quint16(0));
 
-		if(config.length() == 2)
-		{
-			port = config[1].toUShort(&ok);
-		}
+		server = std::make_unique<ZbntTcpServer>(QHostAddress(address), port, dev.get());
+	}
+	else if(type == "local")
+	{
+		QString name;
 
-		if(!ok)
-		{
-			qCritical("[cfg] F: Invalid port specified");
-			return 1;
-		}
+		readSetting(settings, "name", name);
 
-		dev = std::make_unique<AxiDevice>();
-		server = std::make_unique<ZbntTcpServer>(port, dev.get());
-#else
-		qCritical("[cfg] F: Mode AXI requires running in a Zynq/ZynqMP device");
-		return 1;
-#endif
+		server = std::make_unique<ZbntLocalServer>(name, dev.get());
 	}
 	else
 	{
-		if(config.length() < 3 || config.length() > 4)
-		{
-			qCritical("[cfg] F: Invalid configuration string");
-			return 1;
-		}
-
-		if(config[2] == "tcp")
-		{
-			bool ok = true;
-			quint16 port = 0;
-
-			if(config.length() == 4)
-			{
-				port = config[3].toUShort(&ok);
-			}
-
-			if(!ok)
-			{
-				qCritical("[cfg] F: Invalid port specified");
-				return 1;
-			}
-
-			dev = std::make_unique<PciDevice>(config[1].toString());
-			server = std::make_unique<ZbntTcpServer>(port, dev.get());
-		}
-		else if(config[2] == "local")
-		{
-			qCritical("[cfg] F: Local socket mode not yet implemented");
-			return 1;
-		}
-		else
-		{
-			qCritical("[cfg] F: Invalid socket type requested, valid values: TCP, local");
-			return 1;
-		}
+		qCritical("[cfg] F: Invalid value for setting: type");
+		return 1;
 	}
+
+	settings.endGroup();
 
 	return app.exec();
 }
