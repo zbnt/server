@@ -30,13 +30,16 @@ class DiscoveryServer : public QObject
 {
 public:
 	DiscoveryServer(const QNetworkInterface &iface, quint16 port, bool ip6 = false, QObject *parent = nullptr);
+	DiscoveryServer(const QString &name, QObject *parent = nullptr);
 	~DiscoveryServer();
 
 	void onReadyRead();
 
 private:
+	bool m_local = false;
 	bool m_ip6 = false;
 	quint16 m_port = 0;
+	QString m_name = "";
 	QNetworkInterface m_iface;
 	QUdpSocket *m_server = nullptr;
 };
