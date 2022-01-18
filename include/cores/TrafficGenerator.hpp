@@ -22,9 +22,9 @@
 
 #include <cores/AbstractCore.hpp>
 
-#define TGEN_MEM_FRAME_OFFSET   0x0800
-#define TGEN_MEM_MASK_OFFSET    0x1000
-#define TGEN_MEM_SIZE           2048
+#define TGEN_MEM_TEMPLATE_OFFSET 0x0800
+#define TGEN_MEM_SOURCE_OFFSET   0x1000
+#define TGEN_MEM_SIZE            2048
 
 class TrafficGenerator : public AbstractCore
 {
