@@ -191,7 +191,7 @@ bool AxiDevice::loadBitstream(const QString &name)
 	m_activeBitstream = name;
 
 	if(!fdtEnumerateDevices(fdt, 0,
-		[&](const QString &name, int offset) -> bool
+		[&](const QString &name, int offset, int parentOffset) -> bool
 		{
 			QString compatible;
 
@@ -319,13 +319,29 @@ bool AxiDevice::loadBitstream(const QString &name)
 
 				// Get memory range
 
-				uintptr_t base;
-				size_t size;
+				int cellsAddr = fdt_address_cells(fdt, parentOffset);
+				int cellsSize = fdt_size_cells(fdt, parentOffset);
 
-				if(!fdtGetArrayProp(fdt, offset, "reg", base, size))
+				if(cellsAddr < 0 || cellsSize <= 0)
+				{
+					qCritical("[core] E: Can't determine the number of address and size cells");
+					return false;
+				}
+
+				int len = 0;
+				const void *data = fdt_getprop(fdt, offset, "reg", &len);
+
+				if(!data || len != 4*(cellsAddr + cellsSize))
 				{
 					qCritical("[core] E: Device tree lacks a valid value for reg");
 					return false;
+				}
+
+				size_t size = 0;
+
+				for(int i = 4*cellsAddr; i < len; ++i)
+				{
+					size = (size << 8) | ((const uint8_t*) data)[i];
 				}
 
 				// Open memory map

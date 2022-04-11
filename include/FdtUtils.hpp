@@ -54,7 +54,7 @@ T readAsNumber(const QByteArray &data, quint32 offset)
 }
 
 extern int64_t getMemoryUsage();
-extern bool fdtEnumerateDevices(const void *fdt, int offset, const std::function<bool(const QString&, int)> &callback);
+extern bool fdtEnumerateDevices(const void *fdt, int offset, const std::function<bool(const QString&, int, int)> &callback);
 extern bool fdtGetStringProp(const void *fdt, int offset, const char *name, QString &out);
 
 template<typename T>

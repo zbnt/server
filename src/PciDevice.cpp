@@ -220,7 +220,7 @@ PciDevice::PciDevice(const QString &device)
 	m_boardName = m_boardName.mid(5);
 
 	if(!fdtEnumerateDevices(fdt, 0,
-		[&](const QString &name, int offset) -> bool
+		[&](const QString &name, int offset, int parentOffset) -> bool
 		{
 			QString compatible;
 
@@ -258,13 +258,36 @@ PciDevice::PciDevice(const QString &device)
 
 				// Get memory range
 
-				uintptr_t base;
-				size_t size;
+				int cellsAddr = fdt_address_cells(fdt, parentOffset);
+				int cellsSize = fdt_size_cells(fdt, parentOffset);
 
-				if(!fdtGetArrayProp(fdt, offset, "reg", base, size))
+				if(cellsAddr < 0 || cellsSize <= 0)
+				{
+					qCritical("[core] E: Can't determine the number of address and size cells");
+					return false;
+				}
+
+				int len = 0;
+				const void *data = fdt_getprop(fdt, offset, "reg", &len);
+
+				if(!data || len != 4*(cellsAddr + cellsSize))
 				{
 					qCritical("[core] E: Device tree lacks a valid value for reg");
 					return false;
+				}
+
+				uintptr_t base = 0;
+
+				for(int i = 0; i < 4*cellsAddr; ++i)
+				{
+					base = (base << 8) | ((const uint8_t*) data)[i];
+				}
+
+				size_t size = 0;
+
+				for(int i = 4*cellsAddr; i < len; ++i)
+				{
+					size = (size << 8) | ((const uint8_t*) data)[i];
 				}
 
 				// Create core
@@ -422,7 +445,7 @@ bool PciDevice::loadBitstream(const QString &name)
 	const char *fdt = dtb.constData();
 
 	if(!fdtEnumerateDevices(fdt, 0,
-		[&](const QString &name, int offset) -> bool
+		[&](const QString &name, int offset, int parentOffset) -> bool
 		{
 			QString compatible;
 
@@ -454,13 +477,36 @@ bool PciDevice::loadBitstream(const QString &name)
 
 				// Get memory range
 
-				uintptr_t base;
-				size_t size;
+				int cellsAddr = fdt_address_cells(fdt, parentOffset);
+				int cellsSize = fdt_size_cells(fdt, parentOffset);
 
-				if(!fdtGetArrayProp(fdt, offset, "reg", base, size))
+				if(cellsAddr < 0 || cellsSize <= 0)
+				{
+					qCritical("[core] E: Can't determine the number of address and size cells");
+					return false;
+				}
+
+				int len = 0;
+				const void *data = fdt_getprop(fdt, offset, "reg", &len);
+
+				if(!data || len != 4*(cellsAddr + cellsSize))
 				{
 					qCritical("[core] E: Device tree lacks a valid value for reg");
 					return false;
+				}
+
+				uintptr_t base = 0;
+
+				for(int i = 0; i < 4*cellsAddr; ++i)
+				{
+					base = (base << 8) | ((const uint8_t*) data)[i];
+				}
+
+				size_t size = 0;
+
+				for(int i = 4*cellsAddr; i < len; ++i)
+				{
+					size = (size << 8) | ((const uint8_t*) data)[i];
 				}
 
 				// Create core
