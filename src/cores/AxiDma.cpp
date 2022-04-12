@@ -28,6 +28,7 @@ AxiDma::AxiDma(const QString &name, uint32_t id, void *regs, const DmaBuffer *bu
 {
 	m_regs->mem_base = buffer->getPhysicalAddr();
 	m_regs->mem_size = buffer->getSize();
+	clearInterrupts(IRQ_ALL);
 }
 
 AxiDma::~AxiDma()
