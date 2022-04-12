@@ -51,6 +51,7 @@ void ZbntServer::startRun()
 	if(m_isRunning) return;
 
 	m_lastDmaIdx = 0;
+	m_dmaReachedEnd = false;
 	m_pendingDmaData.clear();
 	m_device->dmaEngine()->startTransfer();
 
@@ -283,22 +284,31 @@ void ZbntServer::handleInterrupt()
 	uint32_t msgEnd = m_device->dmaEngine()->getLastMessageEnd();
 	uint16_t irq = m_device->dmaEngine()->getActiveInterrupts();
 
-	if(clientAvailable())
+	if(irq && (!m_dmaReachedEnd || msgEnd < m_lastDmaIdx || (irq & AxiDma::IRQ_MEM_END)))
 	{
-		sendBytes(m_pendingDmaData);
-		sendBytes(buffer + m_lastDmaIdx, msgEnd - m_lastDmaIdx);
-	}
-
-	m_pendingDmaData.clear();
-	m_lastDmaIdx = msgEnd;
-
-	if(irq & AxiDma::IRQ_MEM_END)
-	{
-		m_lastDmaIdx = 0;
-
-		if(msgEnd != bufferSize)
+		if(m_dmaReachedEnd)
 		{
-			m_pendingDmaData.append((char*) buffer + msgEnd, bufferSize - msgEnd);
+			m_lastDmaIdx = 0;
+			m_dmaReachedEnd = false;
+		}
+
+		if(clientAvailable())
+		{
+			sendBytes(m_pendingDmaData);
+			sendBytes(buffer + m_lastDmaIdx, msgEnd - m_lastDmaIdx);
+		}
+
+		m_pendingDmaData.clear();
+		m_lastDmaIdx = msgEnd;
+
+		if(irq & AxiDma::IRQ_MEM_END)
+		{
+			m_dmaReachedEnd = true;
+
+			if(msgEnd != bufferSize)
+			{
+				m_pendingDmaData.append((char*) buffer + msgEnd, bufferSize - msgEnd);
+			}
 		}
 	}
 

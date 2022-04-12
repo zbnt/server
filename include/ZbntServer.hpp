@@ -57,4 +57,5 @@ private:
 
 	QByteArray m_pendingDmaData;
 	uint32_t m_lastDmaIdx = 0;
+	bool m_dmaReachedEnd = false;
 };
