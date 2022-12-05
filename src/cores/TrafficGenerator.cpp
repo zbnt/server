@@ -31,6 +31,9 @@ TrafficGenerator::TrafficGenerator(const QString &name, uint32_t id, void *regs,
 	m_regs->burst_time_on = 100;
 	m_regs->burst_time_off = 100;
 
+	m_templateName = "";
+	m_templateSize = 0;
+
 	qInfo("[core] %s is connected to port %d", qUtf8Printable(name), port);
 }
 
@@ -150,50 +153,66 @@ bool TrafficGenerator::setProperty(PropertyID propID, const QByteArray &value)
 			break;
 		}
 
-		case PROP_LFSR_SEED:
+		case PROP_PRNG_SEED:
 		{
 			if(value.length() < 1) return false;
 
-			m_regs->lfsr_seed_val = readAsNumber<uint8_t>(value, 0);
+			m_regs->prng_seed_val = readAsNumber<uint8_t>(value, 0);
 			m_regs->config |= CFG_SEED_REQ;
 			break;
 		}
 
 		case PROP_FRAME_TEMPLATE:
 		{
-			uint8_t *ptr = makePointer<uint8_t>(m_regs, TGEN_MEM_TEMPLATE_OFFSET);
+			// Extract name
+
+			int nameLen = value.indexOf('\0');
+
+			if(nameLen <= 0) return false;
+
+			auto name = value.left(nameLen);
+
+			// Get and check length of the actual data and source selectors
+
+			int dataLen = value.length() - nameLen - 1;
+			int templateLen = dataLen / 2;
+
+			if(dataLen == 0 || (dataLen % 2) != 0) return false;
+
+			// Disable transmission while we update the template
+
+			uint32_t config = m_regs->config;
+
+			m_regs->config = config & ~CFG_ENABLE;
+
+			// Copy new values
+
+			const char *srcA = value.constData() + nameLen + 1;
+			const char *srcB = srcA + templateLen;
+
+			uint8_t *dstA = makePointer<uint8_t>(m_regs, TGEN_MEM_TEMPLATE_OFFSET);
+			uint8_t *dstB = makePointer<uint8_t>(m_regs, TGEN_MEM_SOURCE_OFFSET);
 
 			for(int i = 0; i < TGEN_MEM_SIZE; ++i)
 			{
-				if(i < value.length())
+				if(i < templateLen)
 				{
-					ptr[i] = value[i];
+					dstA[i] = srcA[i];
+					dstB[i] = srcB[i];
 				}
 				else
 				{
-					ptr[i] = 0;
+					dstA[i] = 0x00;
+					dstB[i] = 0x01;
 				}
 			}
 
-			break;
-		}
+			m_templateName = name;
+			m_templateSize = templateLen;
 
-		case PROP_FRAME_SOURCE:
-		{
-			uint8_t *ptr = makePointer<uint8_t>(m_regs, TGEN_MEM_SOURCE_OFFSET);
+			// Resume operation
 
-			for(int i = 0; i < TGEN_MEM_SIZE; ++i)
-			{
-				if(i < value.length())
-				{
-					ptr[i] = value[i];
-				}
-				else
-				{
-					ptr[i] = 0x01;
-				}
-			}
-
+			m_regs->config = config;
 			break;
 		}
 
@@ -248,25 +267,30 @@ bool TrafficGenerator::getProperty(PropertyID propID, const QByteArray &params, 
 			break;
 		}
 
-		case PROP_LFSR_SEED:
+		case PROP_PRNG_SEED:
 		{
-			appendAsBytes(value, m_regs->lfsr_seed_val);
+			appendAsBytes(value, m_regs->prng_seed_val);
 			break;
 		}
 
 		case PROP_FRAME_TEMPLATE:
 		{
-			char *ptr = makePointer<char>(m_regs, TGEN_MEM_TEMPLATE_OFFSET);
+			// Name
 
-			value.append(ptr, TGEN_MEM_SIZE);
-			break;
-		}
+			value.append(m_templateName);
+			value.push_back('\0');
 
-		case PROP_FRAME_SOURCE:
-		{
-			char *ptr = makePointer<char>(m_regs, TGEN_MEM_SOURCE_OFFSET);
+			// Data bytes
 
-			value.append(ptr, TGEN_MEM_SIZE);
+			char *srcA = makePointer<char>(m_regs, TGEN_MEM_TEMPLATE_OFFSET);
+
+			value.append(srcA, m_templateSize);
+
+			// Source selectors
+
+			char *srcB = makePointer<char>(m_regs, TGEN_MEM_SOURCE_OFFSET);
+
+			value.append(srcB, m_templateSize);
 			break;
 		}
 

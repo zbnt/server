@@ -42,7 +42,7 @@ public:
 		uint32_t fdelay;
 		uint16_t burst_time_on;
 		uint16_t burst_time_off;
-		uint8_t lfsr_seed_val;
+		uint8_t prng_seed_val;
 	};
 
 public:
@@ -64,4 +64,7 @@ public:
 private:
 	volatile Registers *m_regs;
 	uint8_t m_port;
+
+	QByteArray m_templateName;
+	uint32_t m_templateSize;
 };

@@ -30,6 +30,7 @@ FrameDetector::FrameDetector(const QString &name, uint32_t id, void *regs, uint8
 	m_regs->log_identifier = m_id | MSG_ID_MEASUREMENT;
 
 	m_scriptNames.fill("", 2 * m_regs->num_scripts);
+	m_scriptSizes.fill(0, 2 * m_regs->num_scripts);
 
 	qInfo("[core] %s is connected to ports %d and %d", qUtf8Printable(name), portA, portB);
 }
@@ -149,19 +150,40 @@ bool FrameDetector::setProperty(PropertyID propID, const QByteArray &value)
 
 		case PROP_FRAME_SCRIPT:
 		{
+			// Extract index
+
 			if(value.length() < 4) return false;
-			if(value.length() % 4) return false;
 
 			uint32_t idx = readAsNumber<uint32_t>(value, 0);
+
 			if(idx >= 2*m_regs->num_scripts) return false;
+
+			// Extract name
+
+			int nameLen = value.indexOf('\0', 4) - 4;
+
+			if(nameLen <= 0) return false;
+
+			auto name = value.mid(4, nameLen);
+
+			// Get and check length of the script
+
+			int scriptLen = value.length() - nameLen - 5;
+
+			if(scriptLen <= 0 || (scriptLen % 4) != 0) return false;
+
+			// Disable script while it's being updated
 
 			uint32_t mask = 1 << idx;
 			uint32_t enable = m_regs->script_enable;
-			uint32_t *ptr = makePointer<uint32_t>(m_regs, m_regs->script_mem_offset + 4 * idx * m_regs->max_script_size);
 
 			m_regs->script_enable = enable & ~mask;
 
-			for(int i = 0, j = 4, k = m_regs->max_script_size; i < k; ++i, j += 4)
+			// Copy new values
+
+			uint32_t *ptr = makePointer<uint32_t>(m_regs, m_regs->script_mem_offset + 4 * idx * m_regs->max_script_size);
+
+			for(int i = 0, j = nameLen + 5, k = m_regs->max_script_size; i < k; ++i, j += 4)
 			{
 				if(j < value.length())
 				{
@@ -173,18 +195,12 @@ bool FrameDetector::setProperty(PropertyID propID, const QByteArray &value)
 				}
 			}
 
+			m_scriptNames[idx] = name;
+			m_scriptSizes[idx] = scriptLen;
+
+			// Resume operation
+
 			m_regs->script_enable = enable;
-			break;
-		}
-
-		case PROP_FRAME_SCRIPT_NAME:
-		{
-			if(value.length() < 4) return false;
-
-			uint32_t idx = readAsNumber<uint32_t>(value, 0);
-			if(idx >= 2*m_regs->num_scripts) return false;
-
-			m_scriptNames[idx] = value.mid(4, -1);
 			break;
 		}
 
@@ -233,24 +249,16 @@ bool FrameDetector::getProperty(PropertyID propID, const QByteArray &params, QBy
 			uint32_t idx = readAsNumber<uint32_t>(params, 0);
 			if(idx >= 2*m_regs->num_scripts) return false;
 
+			value.append(m_scriptNames[idx]);
+			value.push_back('\0');
+
 			uint32_t *ptr = makePointer<uint32_t>(m_regs, m_regs->script_mem_offset + 4 * idx * m_regs->max_script_size);
 
-			for(int i = 0, j = m_regs->max_script_size; i < j; ++i)
+			for(int i = 0, j = m_scriptSizes[idx]; i < j; ++i)
 			{
 				appendAsBytes(value, ptr[i]);
 			}
 
-			break;
-		}
-
-		case PROP_FRAME_SCRIPT_NAME:
-		{
-			if(params.length() < 4) return false;
-
-			uint32_t idx = readAsNumber<uint32_t>(params, 0);
-			if(idx >= 2*m_regs->num_scripts) return false;
-
-			value.append(m_scriptNames[idx]);
 			break;
 		}
 

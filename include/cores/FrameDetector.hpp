@@ -67,5 +67,7 @@ public:
 private:
 	volatile Registers *m_regs;
 	uint8_t m_portA, m_portB;
+
 	QVector<QByteArray> m_scriptNames;
+	QVector<uint32_t> m_scriptSizes;
 };
