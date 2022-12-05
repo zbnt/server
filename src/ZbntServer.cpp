@@ -100,6 +100,13 @@ void ZbntServer::stopRun()
 
 	m_device->timer()->setMaximumTime(maxTime);
 
+	// Clear DMA buffer
+
+	uint8_t *buffer = m_device->dmaBuffer()->getVirtualAddr();
+	uint32_t bufferSize = m_device->dmaBuffer()->getSize();
+
+	memset(buffer, 0, bufferSize);
+
 	// Notify client, if available
 
 	if(clientAvailable())
@@ -189,6 +196,11 @@ void ZbntServer::onMessageReceived(quint16 id, const QByteArray &data)
 			}
 
 			m_device->timer()->announce(response);
+
+			uint8_t *buffer = m_device->dmaBuffer()->getVirtualAddr();
+			uint32_t bufferSize = m_device->dmaBuffer()->getSize();
+
+			memset(buffer, 0, bufferSize);
 
 			sendMessage(MSG_ID_PROGRAM_PL, response);
 			break;
