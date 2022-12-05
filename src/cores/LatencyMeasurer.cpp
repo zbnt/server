@@ -136,10 +136,10 @@ bool LatencyMeasurer::setProperty(PropertyID propID, const QByteArray &value)
 		case PROP_MAC_ADDR:
 		{
 			if(value.length() < 7) return false;
+			if(value[0] > 1) return false;
 
-			uint8_t idx = value[0] & 1;
 			uint16_t cfg = m_regs->config;
-			volatile uint8_t *ptr = idx ? m_regs->mac_addr_b : m_regs->mac_addr_a;
+			volatile uint8_t *ptr = value[0] ? m_regs->mac_addr_b : m_regs->mac_addr_a;
 
 			m_regs->config = cfg & ~CFG_ENABLE;
 
@@ -155,10 +155,9 @@ bool LatencyMeasurer::setProperty(PropertyID propID, const QByteArray &value)
 		case PROP_IP_ADDR:
 		{
 			if(value.length() < 5) return false;
+			if(value[0] > 1) return false;
 
-			uint8_t idx = value[0] & 1;
-
-			if(!idx)
+			if(!value[0])
 			{
 				m_regs->ip_addr_a = readAsNumber<uint32_t>(value, 1);
 			}
@@ -211,8 +210,6 @@ bool LatencyMeasurer::setProperty(PropertyID propID, const QByteArray &value)
 
 bool LatencyMeasurer::getProperty(PropertyID propID, const QByteArray &params, QByteArray &value)
 {
-	Q_UNUSED(params);
-
 	switch(propID)
 	{
 		case PROP_ENABLE:
@@ -235,15 +232,19 @@ bool LatencyMeasurer::getProperty(PropertyID propID, const QByteArray &params, Q
 
 		case PROP_MAC_ADDR:
 		{
-			value.append((char*) m_regs->mac_addr_a, 6);
-			value.append((char*) m_regs->mac_addr_b, 6);
+			if(params.length() < 1) return false;
+			if(params[0] > 1) return false;
+
+			value.append((char*) (!params[0] ? m_regs->mac_addr_a : m_regs->mac_addr_b), 6);
 			break;
 		}
 
 		case PROP_IP_ADDR:
 		{
-			appendAsBytes(value, m_regs->ip_addr_a);
-			appendAsBytes(value, m_regs->ip_addr_b);
+			if(params.length() < 1) return false;
+			if(params[0] > 1) return false;
+
+			appendAsBytes(value, !params[0] ? m_regs->ip_addr_a : m_regs->ip_addr_b);
 			break;
 		}
 
