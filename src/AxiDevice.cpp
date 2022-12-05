@@ -254,7 +254,7 @@ bool AxiDevice::loadBitstream(const QString &name)
 				// Open memory map
 
 				QByteArray devPath = "/dev/" + devName.toUtf8();
-				int fd = open(devPath.constData(), O_RDONLY);
+				int fd = open(devPath.constData(), O_RDWR);
 
 				if(fd == -1)
 				{
@@ -262,7 +262,7 @@ bool AxiDevice::loadBitstream(const QString &name)
 					return false;
 				}
 
-				void *buf = mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0);
+				void *buf = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 
 				if(!buf || buf == MAP_FAILED)
 				{
